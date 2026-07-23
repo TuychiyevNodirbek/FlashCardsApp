@@ -26,24 +26,41 @@ import uz.nodirbek.flashcardsapp.ui.theme.*
 fun AddWordBottomSheet(
     onDismiss: () -> Unit,
     onSave: (Card) -> Unit,
-    deckId: String = "default"
+    deckId: String = "default",
+    onSaveAndNext: ((Card) -> Unit)? = null
 ) {
     var front by remember { mutableStateOf("") }
     var back by remember { mutableStateOf("") }
     var frontError by remember { mutableStateOf(false) }
     var backError by remember { mutableStateOf(false) }
 
+    fun buildCard(): Card? {
+        frontError = front.isBlank()
+        backError = back.isBlank()
+        if (frontError || backError) return null
+        return Card(
+            id = java.util.UUID.randomUUID().toString(),
+            deckId = deckId,
+            front = front.trim(),
+            back = back.trim(),
+            dueDate = RateCardUseCase.getTodayDate(),
+            createdAt = System.currentTimeMillis()
+        )
+    }
+
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = FdSurface,
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrimColor = Color.Black.copy(alpha = 0.32f),
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = 12.dp, bottom = 4.dp)
-                    .width(36.dp)
+                    .padding(vertical = 12.dp)
+                    .width(40.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(FdBorder)
+                    .background(MaterialTheme.colorScheme.outline)
             )
         }
     ) {
@@ -51,30 +68,40 @@ fun AddWordBottomSheet(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Header with close
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
                     "Новая карточка",
                     fontFamily = OutfitFamily,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 18.sp,
-                    color = FdText,
-                    modifier = Modifier.weight(1f)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Box(
                     Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .border(1.5.dp, FdBorder, RoundedCornerShape(8.dp))
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Close, null, tint = FdTextSub, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
-            Spacer(Modifier.height(20.dp))
 
+            // Input fields
             SheetField(
                 label = "Лицевая сторона",
                 hint = "Слово или фраза",
@@ -82,7 +109,7 @@ fun AddWordBottomSheet(
                 isError = frontError,
                 onValueChange = { front = it; frontError = false }
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             SheetField(
                 label = "Оборотная сторона",
                 hint = "Перевод или определение",
@@ -92,44 +119,50 @@ fun AddWordBottomSheet(
             )
             Spacer(Modifier.height(24.dp))
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Cancel
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(FdSurface2)
-                        .border(1.5.dp, FdBorder, RoundedCornerShape(12.dp))
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdText)
+            // Actions: "+ ещё" (save & continue) and primary save — per design
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (onSaveAndNext != null) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                            .clickable {
+                                buildCard()?.let { card ->
+                                    onSaveAndNext(card)
+                                    front = ""
+                                    back = ""
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "+ ещё",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-                // Save
                 PressButton(
-                    onClick = {
-                        frontError = front.isBlank()
-                        backError = back.isBlank()
-                        if (!frontError && !backError) {
-                            onSave(
-                                Card(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    deckId = deckId,
-                                    front = front.trim(),
-                                    back = back.trim(),
-                                    dueDate = RateCardUseCase.getTodayDate(),
-                                    createdAt = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                    },
-                    modifier = Modifier.weight(1f).height(50.dp),
+                    onClick = { buildCard()?.let(onSave) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
                     color = FdPrimary,
                     shadowColor = FdPrimaryDark,
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Сохранить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                    Text(
+                        "Сохранить",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color.White
+                    )
                 }
             }
         }
@@ -150,15 +183,16 @@ fun EditCardBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = FdSurface,
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrimColor = Color.Black.copy(alpha = 0.32f),
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = 12.dp, bottom = 4.dp)
-                    .width(36.dp)
+                    .padding(vertical = 12.dp)
+                    .width(40.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(FdBorder)
+                    .background(MaterialTheme.colorScheme.outline)
             )
         }
     ) {
@@ -166,29 +200,37 @@ fun EditCardBottomSheet(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
                     "Редактировать карточку",
                     fontFamily = OutfitFamily,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 18.sp,
-                    color = FdText,
-                    modifier = Modifier.weight(1f)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Box(
                     Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .border(1.5.dp, FdBorder, RoundedCornerShape(8.dp))
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Close, null, tint = FdTextSub, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
-            Spacer(Modifier.height(20.dp))
 
             SheetField(
                 label = "Лицевая сторона",
@@ -211,7 +253,7 @@ fun EditCardBottomSheet(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(FdRedLight)
-                        .border(1.5.dp, FdRed.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .border(1.5.dp, FdRed.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                         .padding(14.dp)
                 ) {
                     Column {
@@ -222,20 +264,20 @@ fun EditCardBottomSheet(
                             fontSize = 14.sp,
                             color = FdRed
                         )
-                        Text("Это действие необратимо", fontSize = 12.sp, color = FdTextSub, modifier = Modifier.padding(top = 2.dp))
+                        Text("Это действие необратимо", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(
                                 Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(FdSurface2)
-                                    .border(1.5.dp, FdBorder, RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                                     .clickable { showDeleteConfirm = false }
                                     .padding(10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FdText)
+                                Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                             Box(
                                 Modifier
@@ -252,36 +294,52 @@ fun EditCardBottomSheet(
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
             }
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Delete button
+            // Save button (full width)
+            PressButton(
+                onClick = {
+                    if (front.isNotBlank() && back.isNotBlank()) {
+                        onSave(card.copy(front = front.trim(), back = back.trim()))
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                color = FdPrimary,
+                shadowColor = FdPrimaryDark,
+                shape = RoundedCornerShape(12.dp),
+                enabled = front.isNotBlank() && back.isNotBlank()
+            ) {
+                Text(
+                    "Сохранить",
+                    fontFamily = OutfitFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color.White
+                )
+            }
+
+            // Delete button
+            if (!showDeleteConfirm) {
                 Box(
                     Modifier
-                        .size(50.dp)
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(FdRedLight)
-                        .border(1.5.dp, FdRed.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                        .clickable { showDeleteConfirm = true },
+                        .border(1.5.dp, FdRed.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .clickable { showDeleteConfirm = true }
+                        .padding(12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🗑️", fontSize = 18.sp)
-                }
-                // Save button
-                PressButton(
-                    onClick = {
-                        if (front.isNotBlank() && back.isNotBlank()) {
-                            onSave(card.copy(front = front.trim(), back = back.trim()))
-                        }
-                    },
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    color = FdPrimary,
-                    shadowColor = FdPrimaryDark,
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = front.isNotBlank() && back.isNotBlank()
-                ) {
-                    Text("Сохранить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                    Text(
+                        "🗑️ Удалить карточку",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = FdRed
+                    )
                 }
             }
         }
@@ -296,31 +354,38 @@ private fun SheetField(
     isError: Boolean = false,
     onValueChange: (String) -> Unit
 ) {
+
     Column {
         Text(
             label,
             fontFamily = OutfitFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
-            color = FdTextSub,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 6.dp)
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(hint, color = FdTextSub, fontSize = 14.sp) },
+            placeholder = { Text(hint, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
             isError = isError,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
+            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp
+            ),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = FdPrimary,
-                unfocusedBorderColor = FdBorder,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                 errorBorderColor = FdRed,
-                focusedContainerColor = FdSurface,
-                unfocusedContainerColor = FdSurface2,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 errorContainerColor = FdRedLight
             ),
-            singleLine = true
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4
         )
         if (isError) {
             Text(

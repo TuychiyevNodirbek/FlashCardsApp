@@ -5,12 +5,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import uz.nodirbek.flashcardsapp.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +33,7 @@ fun FlashcardsScreen(
     viewModel: HomeViewModel,
     onBackClick: () -> Unit
 ) {
-    val isDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = LocalIsDarkTheme.current
     val uiState by viewModel.uiState.collectAsState()
     val cards = remember(uiState.cards, deckId) { uiState.cards.filter { it.deckId == deckId } }
     val shuffledCards = remember(cards) { cards.shuffled() }
@@ -49,13 +49,13 @@ fun FlashcardsScreen(
     )
 
     if (cards.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(if (isDarkTheme) FdDarkBackground else FdBackground), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("📋", fontSize = 48.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Нет карточек", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = if (isDarkTheme) FdDarkText else FdText)
+                Text("Нет карточек", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(8.dp))
-                Text("Добавьте карточки в колоду", fontSize = 13.sp, color = if (isDarkTheme) FdDarkTextSub else FdTextSub)
+                Text("Добавьте карточки в колоду", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(24.dp))
                 PressButton(onClick = onBackClick, modifier = Modifier.width(160.dp).height(48.dp),
                     color = FdPrimary, shadowColor = FdPrimaryDark, shape = RoundedCornerShape(12.dp)) {
@@ -68,28 +68,28 @@ fun FlashcardsScreen(
 
     val card = displayCards.getOrNull(currentIndex)
 
-    Scaffold(containerColor = if (isDarkTheme) FdDarkBackground else FdBackground) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             // ── Top bar ───────────────────────────────────────
-            Surface(color = if (isDarkTheme) FdDarkSurface else FdSurface, shadowElevation = 0.dp) {
+            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
                 Column {
                     Row(
                         Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, null, tint = if (isDarkTheme) FdDarkText else FdText)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = MaterialTheme.colorScheme.onSurface)
                         }
                         Text(
                             "Карточки ${if (displayCards.isNotEmpty()) currentIndex + 1 else 0}/${displayCards.size}",
-                            fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = if (isDarkTheme) FdDarkText else FdText,
+                            fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
                         // Shuffle button
                         Box(
                             Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .border(1.5.dp, if (isDarkTheme) FdDarkBorder else FdBorder, RoundedCornerShape(8.dp))
+                                .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                                 .clickable {
                                     displayCards = cards.shuffled()
                                     currentIndex = 0
@@ -106,7 +106,7 @@ fun FlashcardsScreen(
                         progress = if (displayCards.isNotEmpty()) (currentIndex + 1f) / displayCards.size else 0f,
                         modifier = Modifier.fillMaxWidth(),
                         color = FdPrimary,
-                        trackColor = if (isDarkTheme) FdDarkBorder else FdBorder
+                        trackColor = MaterialTheme.colorScheme.outline
                     )
                 }
             }
@@ -133,8 +133,8 @@ fun FlashcardsScreen(
                                 Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isDarkTheme) FdDarkSurface else FdSurface)
-                                    .border(2.dp, if (isDarkTheme) FdDarkBorder else FdBorder, RoundedCornerShape(20.dp)),
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
@@ -143,9 +143,9 @@ fun FlashcardsScreen(
                                     }
                                     Spacer(Modifier.height(20.dp))
                                     Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp,
-                                        textAlign = TextAlign.Center, color = if (isDarkTheme) FdDarkText else FdText)
+                                        textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface)
                                     Spacer(Modifier.height(20.dp))
-                                    Text("Нажмите для переворота", fontSize = 11.sp, color = if (isDarkTheme) FdDarkTextSub else FdTextSub)
+                                    Text("Нажмите для переворота", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         } else {
@@ -153,7 +153,7 @@ fun FlashcardsScreen(
                                 Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isDarkTheme) Color(0xFF0F0F14) else FdText)
+                                    .background(if (isDarkTheme) Color(0xFF0F0F14) else MaterialTheme.colorScheme.onSurface)
                                     .graphicsLayer { rotationY = 180f },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -185,12 +185,12 @@ fun FlashcardsScreen(
                             }
                         },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        color = if (isDarkTheme) FdDarkSurface else FdSurface,
-                        shadowColor = if (isDarkTheme) FdDarkBorder else FdBorder,
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowColor = MaterialTheme.colorScheme.outline,
                         shape = RoundedCornerShape(14.dp),
                         enabled = currentIndex > 0
                     ) {
-                        Text("← Назад", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = if (isDarkTheme) FdDarkText else FdText)
+                        Text("← Назад", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                     }
                     PressButton(
                         onClick = {
@@ -202,7 +202,7 @@ fun FlashcardsScreen(
                             }
                         },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        color = if (isDarkTheme) FdDarkPrimary else FdPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         shadowColor = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
                         shape = RoundedCornerShape(14.dp)
                     ) {
@@ -230,7 +230,7 @@ fun FlashcardsScreen(
                         showCompletionDialog = false
                     },
                     modifier = Modifier.height(44.dp),
-                    color = if (isDarkTheme) FdDarkPrimary else FdPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     shadowColor = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
                     shape = RoundedCornerShape(10.dp)
                 ) {
@@ -244,16 +244,16 @@ fun FlashcardsScreen(
                         showCompletionDialog = false
                     },
                     modifier = Modifier.height(44.dp),
-                    color = if (isDarkTheme) FdDarkSurface else FdSurface,
-                    shadowColor = if (isDarkTheme) FdDarkBorder else FdBorder,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowColor = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Завершить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isDarkTheme) FdDarkText else FdText)
+                    Text("Завершить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             },
-            containerColor = if (isDarkTheme) FdDarkSurface else FdSurface,
-            textContentColor = if (isDarkTheme) FdDarkText else FdText,
-            titleContentColor = if (isDarkTheme) FdDarkText else FdText
+            containerColor = MaterialTheme.colorScheme.surface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
         )
     }
 }

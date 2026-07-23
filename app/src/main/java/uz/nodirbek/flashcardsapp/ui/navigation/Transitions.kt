@@ -1,18 +1,32 @@
 package uz.nodirbek.flashcardsapp.ui.navigation
 
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.ui.Alignment
+
+// Единый easing для «премиального» ощущения
+private val EaseOut = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val EaseIn = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+
+// ── Общие переходы для экрана, который НАКРЫВАЮТ другим ──────────────
+// Экран под новым остаётся на месте и слегка затухает,
+// при возврате назад — плавно проявляется.
+object UnderlyingScreenTransitions {
+    fun exit(): ExitTransition = fadeOut(animationSpec = tween(250)) +
+            scaleOut(targetScale = 0.96f, animationSpec = tween(350, easing = EaseOut))
+
+    fun popEnter(): EnterTransition = fadeIn(animationSpec = tween(250)) +
+            scaleIn(initialScale = 0.96f, animationSpec = tween(350, easing = EaseOut))
+}
 
 // ── BOTTOM NAV (быстро, просто) ──────────────────────────────────────
 object BottomNavTransitions {
@@ -20,74 +34,75 @@ object BottomNavTransitions {
     fun exit(): ExitTransition = fadeOut(animationSpec = tween(200))
 }
 
-// ── SETTINGS / IMPORT (слайд вправо) ──────────────────────────────────
+// ── SETTINGS / IMPORT (слайд справа) ──────────────────────────────────
 object SideModalTransitions {
     fun enter(): EnterTransition = slideInHorizontally(
-        initialOffsetX = { it },  // из правой стороны
-        animationSpec = tween(400)
-    ) + fadeIn(animationSpec = tween(400))
+        initialOffsetX = { it },
+        animationSpec = tween(350, easing = EaseOut)
+    ) + fadeIn(animationSpec = tween(350))
 
-    fun exit(): ExitTransition = slideOutHorizontally(
+    fun popExit(): ExitTransition = slideOutHorizontally(
         targetOffsetX = { it },
-        animationSpec = tween(400)
-    ) + fadeOut(animationSpec = tween(400))
+        animationSpec = tween(300, easing = EaseIn)
+    ) + fadeOut(animationSpec = tween(300))
 }
 
-// ── DECK DETAIL (слайд вверх) ─────────────────────────────────────────
+// ── DECK DETAIL (слайд снизу) ─────────────────────────────────────────
 object DeckDetailTransitions {
     fun enter(): EnterTransition = slideInVertically(
-        initialOffsetY = { it },  // снизу вверх
-        animationSpec = tween(500)
-    ) + fadeIn(animationSpec = tween(500))
+        initialOffsetY = { it },
+        animationSpec = tween(400, easing = EaseOut)
+    ) + fadeIn(animationSpec = tween(400))
 
-    fun exit(): ExitTransition = slideOutVertically(
+    fun popExit(): ExitTransition = slideOutVertically(
         targetOffsetY = { it },
-        animationSpec = tween(500)
-    ) + fadeOut(animationSpec = tween(500))
+        animationSpec = tween(350, easing = EaseIn)
+    ) + fadeOut(animationSpec = tween(350))
 }
 
-// ── STUDY / FLASHCARDS (расширение + фейд, медленно) ────────────────
+// ── STUDY / FLASHCARDS (масштаб + фейд) ──────────────────────────────
 object StudyTransitions {
-    fun enter(): EnterTransition = expandIn(
-        expandFrom = Alignment.Center,
-        animationSpec = tween(600)
-    ) + fadeIn(animationSpec = tween(600))
+    fun enter(): EnterTransition = scaleIn(
+        initialScale = 0.92f,
+        animationSpec = tween(400, easing = EaseOut)
+    ) + fadeIn(animationSpec = tween(400))
 
-    fun exit(): ExitTransition = shrinkOut(
-        shrinkTowards = Alignment.Center,
-        animationSpec = tween(600)
-    ) + fadeOut(animationSpec = tween(600))
+    fun popExit(): ExitTransition = scaleOut(
+        targetScale = 0.92f,
+        animationSpec = tween(300, easing = EaseIn)
+    ) + fadeOut(animationSpec = tween(300))
 }
 
-// ── TEST / MATCH SETUP (слайд вверх + фейд) ─────────────────────────
+// ── TEST / MATCH (слайд снизу наполовину + фейд) ─────────────────────
 object GameSetupTransitions {
     fun enter(): EnterTransition = slideInVertically(
         initialOffsetY = { it / 2 },
-        animationSpec = tween(500)
-    ) + fadeIn(animationSpec = tween(500))
+        animationSpec = tween(400, easing = EaseOut)
+    ) + fadeIn(animationSpec = tween(400))
 
-    fun exit(): ExitTransition = slideOutVertically(
+    fun popExit(): ExitTransition = slideOutVertically(
         targetOffsetY = { it / 2 },
-        animationSpec = tween(500)
-    ) + fadeOut(animationSpec = tween(500))
+        animationSpec = tween(300, easing = EaseIn)
+    ) + fadeOut(animationSpec = tween(300))
 }
 
-// ── RESULTS SCREENS (масштаб + фейд, быстро) ──────────────────────────
+// ── RESULTS SCREENS (фейд + лёгкий масштаб) ──────────────────────────
 object ResultsTransitions {
-    fun enter(): EnterTransition = fadeIn(animationSpec = tween(400))
+    fun enter(): EnterTransition = fadeIn(animationSpec = tween(350)) +
+            scaleIn(initialScale = 1.05f, animationSpec = tween(350, easing = EaseOut))
 
-    fun exit(): ExitTransition = fadeOut(animationSpec = tween(400))
+    fun popExit(): ExitTransition = fadeOut(animationSpec = tween(250))
 }
 
-// ── FORGETTING EDGE (слайд вверх) ─────────────────────────────────────
+// ── FORGETTING EDGE (слайд снизу) ─────────────────────────────────────
 object ForgettingEdgeTransitions {
     fun enter(): EnterTransition = slideInVertically(
         initialOffsetY = { it },
-        animationSpec = tween(500)
-    ) + fadeIn(animationSpec = tween(500))
+        animationSpec = tween(400, easing = EaseOut)
+    ) + fadeIn(animationSpec = tween(400))
 
-    fun exit(): ExitTransition = slideOutVertically(
+    fun popExit(): ExitTransition = slideOutVertically(
         targetOffsetY = { it },
-        animationSpec = tween(500)
-    ) + fadeOut(animationSpec = tween(500))
+        animationSpec = tween(350, easing = EaseIn)
+    ) + fadeOut(animationSpec = tween(350))
 }

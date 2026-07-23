@@ -11,7 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -23,13 +22,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import uz.nodirbek.flashcardsapp.notification.NotificationScheduler
+import uz.nodirbek.flashcardsapp.ui.components.SimpleAppBar
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
-import uz.nodirbek.flashcardsapp.ui.components.SimpleAppBar
+
+private val TTS_LANGS = listOf(
+    "en" to "English (US)",
+    "en-gb" to "English (UK)",
+    "ru" to "Русский",
+    "de" to "Deutsch"
+)
 
 @Composable
 fun SettingsScreen(
@@ -40,6 +48,7 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val notificationScheduler = remember { NotificationScheduler(context) }
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     fun hasNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
@@ -55,7 +64,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) FdDarkBackground else FdBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SimpleAppBar(
                 title = "Настройки",
@@ -66,68 +75,63 @@ fun SettingsScreen(
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(bottom = 32.dp)) {
 
-            item { Spacer(Modifier.height(16.dp)) }
-
-            // Theme section
+            // ── ТЕМА ─────────────────────────────────────────────────────
             item {
-                SettingsSection(title = "Внешний вид") {
-                    SettingsLabel("Тема оформления")
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ThemeOption("☀️", "Светлая", "light", uiState.theme, Modifier.weight(1f)) {
-                            viewModel.setTheme(it)
-                        }
-                        ThemeOption("🌙", "Тёмная", "dark", uiState.theme, Modifier.weight(1f)) {
-                            viewModel.setTheme(it)
-                        }
-                        ThemeOption("🌗", "Системная", "system", uiState.theme, Modifier.weight(1f)) {
-                            viewModel.setTheme(it)
+                SectionLabel("ТЕМА")
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                ) {
+                    listOf("light" to "Светлая", "dark" to "Тёмная", "system" to "Система").forEach { (value, label) ->
+                        val sel = uiState.theme == value
+                        Box(
+                            Modifier.weight(1f)
+                                .background(if (sel) FdPrimary else Color.Transparent)
+                                .clickable { viewModel.setTheme(value) }
+                                .padding(vertical = 11.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                color = if (sel) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
             }
 
-            // Daily goal
+            // ── ЕЖЕДНЕВНЫЕ ЛИМИТЫ ────────────────────────────────────────
             item {
-                SettingsSection(title = "Цель на день") {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Карточек в день", fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = FdText)
-                            Text("Ваша ежедневная цель", fontSize = 12.sp, color = FdTextSub)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(5, 10, 20, 30).forEach { count ->
-                                val sel = uiState.dailyGoal == count
-                                Box(
-                                    Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(if (sel) FdPrimary else FdSurface2)
-                                        .border(1.5.dp, if (sel) FdPrimaryDark else FdBorder, CircleShape)
-                                        .clickable { viewModel.setDailyGoal(count) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "$count",
-                                        fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp,
-                                        color = if (sel) Color.White else FdText
-                                    )
-                                }
-                            }
-                        }
-                    }
+                SectionLabel("ЕЖЕДНЕВНЫЕ ЛИМИТЫ")
+                SettingsGroup {
+                    NumberSettingRow(
+                        label = "Новые карточки в день",
+                        value = uiState.dailyNewLimit,
+                        onCommit = { viewModel.setDailyNewLimit(it) }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+                    NumberSettingRow(
+                        label = "Повторения в день",
+                        value = uiState.dailyReviewLimit,
+                        onCommit = { viewModel.setDailyReviewLimit(it) }
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
             }
 
-            // Notifications
+            // ── НАПОМИНАНИЯ ──────────────────────────────────────────────
             item {
-                SettingsSection(title = "Уведомления") {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                SectionLabel("НАПОМИНАНИЯ")
+                SettingsGroup {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Ежедневные напоминания", fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = FdText)
-                            Text("Напомним повторить карточки", fontSize = 12.sp, color = FdTextSub)
+                            Text("Ежедневное напоминание", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Уведомление о времени повторения", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
                         }
                         Switch(
                             checked = uiState.reminderEnabled,
@@ -145,56 +149,54 @@ fun SettingsScreen(
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = FdPrimary,
-                                uncheckedThumbColor = FdTextSub,
-                                uncheckedTrackColor = FdBorder
+                                checkedTrackColor = FdGreen,
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
                     if (uiState.reminderEnabled) {
-                        Spacer(Modifier.height(12.dp))
-                        val timeLabel = uiState.reminderTime
-                        val timeParts = timeLabel.split(":").let {
-                            if (it.size == 2) it[0].toIntOrNull() to it[1].toIntOrNull()
-                            else 9 to 0
+                        Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+                        val timeParts = uiState.reminderTime.split(":").let {
+                            if (it.size == 2) (it[0].toIntOrNull() ?: 9) to (it[1].toIntOrNull() ?: 0) else 9 to 0
                         }
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(FdSurface2)
-                                .border(1.5.dp, FdBorder, RoundedCornerShape(10.dp))
-                                .clickable {
-                                    TimePickerDialog(context, { _, h, m ->
-                                        val newTime = "%02d:%02d".format(h, m)
-                                        viewModel.setReminderTime(newTime)
-                                        if (uiState.reminderEnabled && permissionGranted) {
-                                            notificationScheduler.scheduleReminder(newTime)
-                                        }
-                                    }, timeParts.first ?: 9, timeParts.second ?: 0, true).show()
-                                }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("🕐", fontSize = 18.sp)
-                            Spacer(Modifier.width(10.dp))
-                            Text("Время:", fontSize = 13.sp, color = FdTextSub, modifier = Modifier.weight(1f))
-                            Text(timeLabel, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FdPrimary)
-                        }
-                        if (!permissionGranted) {
-                            Spacer(Modifier.height(10.dp))
-                            Box(
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+                            Text("Время", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(6.dp))
+                            Row(
                                 Modifier.fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(FdOrangeLight)
-                                    .border(1.5.dp, FdOrange.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                                    .padding(12.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        TimePickerDialog(context, { _, h, m ->
+                                            val newTime = "%02d:%02d".format(h, m)
+                                            viewModel.setReminderTime(newTime)
+                                            if (uiState.reminderEnabled && permissionGranted) {
+                                                notificationScheduler.scheduleReminder(newTime)
+                                            }
+                                        }, timeParts.first, timeParts.second, true).show()
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
+                                Text("🕐", fontSize = 18.sp)
+                                Spacer(Modifier.width(10.dp))
+                                Text(uiState.reminderTime, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FdPrimary)
+                            }
+                            if (!permissionGranted) {
+                                Spacer(Modifier.height(10.dp))
+                                Column(
+                                    Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(FdOrangeLight)
+                                        .border(1.5.dp, FdOrange.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                                        .padding(12.dp)
+                                ) {
                                     Text("⚠️ Уведомления не разрешены", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FdOrange)
                                     Spacer(Modifier.height(6.dp))
                                     Box(
-                                        Modifier
-                                            .clip(RoundedCornerShape(8.dp))
+                                        Modifier.clip(RoundedCornerShape(8.dp))
                                             .background(FdOrange)
                                             .clickable {
                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -206,39 +208,78 @@ fun SettingsScreen(
                                         Text("Разрешить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                                     }
                                 }
-                            }
-                        } else {
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Check, null, tint = FdGreen, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Уведомления включены", fontSize = 12.sp, color = FdGreen)
+                            } else {
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Check, null, tint = FdGreen, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Уведомления включены", fontSize = 12.sp, color = FdGreen)
+                                }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
             }
 
-            // Data
+            // ── ОЗВУЧКА (TTS) ────────────────────────────────────────────
             item {
-                SettingsSection(title = "Данные") {
-                    Box(
+                SectionLabel("ОЗВУЧКА (TTS)")
+                SettingsGroup {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("Язык", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(6.dp))
+                        TtsLangSelector(
+                            selected = uiState.ttsLang,
+                            onSelect = { viewModel.setTtsLang(it) }
+                        )
+                    }
+                    Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        val speedLabel = if (uiState.ttsSpeed % 1f == 0f) "${uiState.ttsSpeed.toInt()}×" else "${uiState.ttsSpeed}×"
+                        Text("Скорость $speedLabel", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Slider(
+                            value = uiState.ttsSpeed,
+                            onValueChange = { viewModel.setTtsSpeed(it) },
+                            valueRange = 0.5f..2f,
+                            steps = 5,
+                            colors = SliderDefaults.colors(
+                                thumbColor = FdPrimary,
+                                activeTrackColor = FdPrimary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.outline
+                            )
+                        )
+                    }
+                }
+            }
+
+            // ── ДАННЫЕ ───────────────────────────────────────────────────
+            item {
+                SectionLabel("ДАННЫЕ")
+                SettingsGroup {
+                    Row(
                         Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(FdPrimaryLight)
-                            .border(1.5.dp, FdPrimary.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
                             .clickable(onClick = onImportClick)
-                            .padding(14.dp)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📂", fontSize = 20.sp)
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text("Импортировать CSV", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdPrimary)
-                                Text("Загрузить карточки из файла", fontSize = 12.sp, color = FdTextSub)
-                            }
+                        Text("📂", fontSize = 20.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Импортировать CSV", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdPrimary)
+                            Text("Загрузить карточки из файла", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                Box(Modifier.padding(horizontal = 14.dp)) {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(10.dp))
+                            .background(FdRedLight)
+                            .border(1.5.dp, FdRed.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                            .clickable { showResetConfirm = true }
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Text("🗑  Сбросить прогресс", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdRed)
                     }
                 }
             }
@@ -247,64 +288,115 @@ fun SettingsScreen(
             item {
                 Spacer(Modifier.height(24.dp))
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("FlashDeck v2.0", fontSize = 12.sp, color = FdBorder, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold)
+                    Text("FlashDeck v2.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
-}
 
-@Composable
-private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
-        Text(title, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FdTextSub)
-        Spacer(Modifier.height(10.dp))
-        Box(
-            Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(FdSurface)
-                .border(1.5.dp, FdBorder, RoundedCornerShape(14.dp))
-                .padding(16.dp)
-        ) {
-            Column { content() }
-        }
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Сбросить прогресс?", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text("Серия, XP, статистика и прогресс всех карточек будут удалены. Это действие необратимо.", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.resetProgress()
+                    showResetConfirm = false
+                }) { Text("Сбросить", color = FdRed, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) { Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+        )
     }
 }
 
 @Composable
-private fun SettingsLabel(text: String) {
-    Text(text, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = FdText)
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+        letterSpacing = 0.6.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 6.dp)
+    )
 }
 
 @Composable
-private fun ThemeOption(
-    emoji: String,
-    label: String,
-    value: String,
-    selected: String,
-    modifier: Modifier = Modifier,
-    onSelect: (String) -> Unit
-) {
-    val isSelected = selected == value
-    Box(
-        modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) FdPrimary else FdSurface2)
-            .border(2.dp, if (isSelected) FdPrimaryDark else FdBorder, RoundedCornerShape(12.dp))
-            .clickable { onSelect(value) }
-            .padding(12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(emoji, fontSize = 20.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                label,
+private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 14.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
+    ) { content() }
+}
+
+@Composable
+private fun NumberSettingRow(label: String, value: Int, onCommit: (Int) -> Unit) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Text(label, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(
+            value = text,
+            onValueChange = { new ->
+                text = new.filter { it.isDigit() }.take(3)
+                text.toIntOrNull()?.let(onCommit)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = LocalTextStyle.current.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
                 fontFamily = OutfitFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                color = if (isSelected) Color.White else FdText
+                fontWeight = FontWeight.Bold
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = FdPrimary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
             )
+        )
+    }
+}
+
+@Composable
+private fun TtsLangSelector(selected: String, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                TTS_LANGS.firstOrNull { it.first == selected }?.second ?: selected,
+                fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Text("▾", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            TTS_LANGS.forEach { (code, name) ->
+                DropdownMenuItem(
+                    text = { Text(name, fontFamily = OutfitFamily, fontWeight = if (code == selected) FontWeight.Bold else FontWeight.Normal) },
+                    onClick = {
+                        onSelect(code)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

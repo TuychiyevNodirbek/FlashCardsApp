@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
+import uz.nodirbek.flashcardsapp.ui.components.ProgressAppBar
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 data class TestResult(val card: Card, val userAnswer: String, val isCorrect: Boolean)
@@ -41,8 +42,8 @@ fun TestScreen(
     val allCards = remember(uiState.cards, deckId) { uiState.cards.filter { it.deckId == deckId } }
 
     if (questions.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(FdBackground), contentAlignment = Alignment.Center) {
-            Text("Нет карточек для теста", color = FdTextSub, fontSize = 14.sp)
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+            Text("Нет карточек для теста", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
         }
         return
     }
@@ -91,25 +92,13 @@ fun TestScreen(
 
 @Composable
 private fun QuestionHeader(index: Int, total: Int, onBack: () -> Unit) {
-    Surface(color = FdSurface, shadowElevation = 0.dp) {
-        Column {
-            Row(Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Default.Close, null, tint = FdText) }
-                Row(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    repeat(total) { idx ->
-                        Box(
-                            Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp))
-                                .background(if (idx < index) FdPrimary else if (idx == index) FdPrimary.copy(alpha = 0.4f) else FdBorder)
-                        )
-                    }
-                }
-                Spacer(Modifier.width(8.dp))
-                Text("${index + 1}/$total", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FdTextSub)
-                Spacer(Modifier.width(8.dp))
-            }
-            Divider(color = FdBorder, thickness = 1.5.dp)
-        }
-    }
+    ProgressAppBar(
+        title = "",
+        progress = if (total > 0) index.toFloat() / total else 0f,
+        onBackClick = onBack,
+        currentIndex = index,
+        total = total
+    )
 }
 
 @Composable
@@ -120,38 +109,38 @@ private fun MultiChoiceQuestion(
     var selected by remember { mutableStateOf<String?>(null) }
     var revealed by remember { mutableStateOf(false) }
 
-    Scaffold(containerColor = FdBackground, topBar = { QuestionHeader(index, total, onBack) }) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { QuestionHeader(index, total, onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(24.dp))
-            Text("Вопрос", fontSize = 12.sp, color = FdTextSub, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold)
+            Text("Вопрос", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
             Box(
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(FdSurface)
-                    .border(2.dp, FdBorder, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                     .padding(20.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = FdText)
+                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(Modifier.height(20.dp))
-            Text("Выберите ответ", fontSize = 12.sp, color = FdTextSub, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold)
+            Text("Выберите ответ", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
             options.forEach { option ->
                 val isSelected = selected == option
                 val isCorrect = option == card.back
                 val bgColor = when {
-                    !revealed -> if (isSelected) FdPrimaryLight else FdSurface
+                    !revealed -> if (isSelected) FdPrimaryLight else MaterialTheme.colorScheme.surface
                     isCorrect -> FdGreenLight
                     isSelected && !isCorrect -> FdRedLight
-                    else -> FdSurface
+                    else -> MaterialTheme.colorScheme.surface
                 }
                 val borderColor = when {
-                    !revealed -> if (isSelected) FdPrimary else FdBorder
+                    !revealed -> if (isSelected) FdPrimary else MaterialTheme.colorScheme.outline
                     isCorrect -> FdGreen
                     isSelected && !isCorrect -> FdRed
-                    else -> FdBorder
+                    else -> MaterialTheme.colorScheme.outline
                 }
                 Box(
                     Modifier
@@ -166,7 +155,7 @@ private fun MultiChoiceQuestion(
                         }
                         .padding(16.dp)
                 ) {
-                    Text(option, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = FdText)
+                    Text(option, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
             Spacer(Modifier.weight(1f))
@@ -193,25 +182,25 @@ private fun WrittenQuestion(
     var revealed by remember { mutableStateOf(false) }
     val isCorrect = input.trim().equals(card.back.trim(), ignoreCase = true)
 
-    Scaffold(containerColor = FdBackground, topBar = { QuestionHeader(index, total, onBack) }) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { QuestionHeader(index, total, onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(24.dp))
             Box(
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(FdSurface)
-                    .border(2.dp, FdBorder, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                     .padding(20.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = FdText)
+                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
             }
             Spacer(Modifier.height(24.dp))
             Row(
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(FdSurface)
-                    .border(2.dp, if (input.isNotEmpty()) FdPrimary else FdBorder, RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(2.dp, if (input.isNotEmpty()) FdPrimary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -219,11 +208,11 @@ private fun WrittenQuestion(
                     value = input,
                     onValueChange = { if (!revealed) input = it },
                     modifier = Modifier.weight(1f),
-                    textStyle = LocalTextStyle.current.copy(color = FdText, fontSize = 16.sp, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold),
+                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold),
                     cursorBrush = SolidColor(FdPrimary),
                     singleLine = true,
                     decorationBox = { inner ->
-                        if (input.isEmpty()) Text("Введите ответ...", color = FdTextSub, fontSize = 14.sp)
+                        if (input.isEmpty()) Text("Введите ответ...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         inner()
                     }
                 )
@@ -244,7 +233,7 @@ private fun WrittenQuestion(
                             color = if (isCorrect) FdGreen else FdRed
                         )
                         if (!isCorrect) {
-                            Text("Правильный ответ: ${card.back}", fontSize = 13.sp, color = FdText, modifier = Modifier.padding(top = 4.dp))
+                            Text("Правильный ответ: ${card.back}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                 }

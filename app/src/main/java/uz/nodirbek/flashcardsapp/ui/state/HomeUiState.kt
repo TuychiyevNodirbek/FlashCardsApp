@@ -17,6 +17,7 @@ data class HomeUiState(
     val dueCards: List<Card> = emptyList(),
     val decks: List<DeckWithStats> = emptyList(),
     val streak: Int = 0,
+    val streakRecord: Int = 0,
     val xp: Long = 0L,
     val level: Int = 1,
     val cardCount: Int = 0,
@@ -27,5 +28,9 @@ data class HomeUiState(
     val theme: String = "system",
     val dailyGoal: Int = 20,
     val reminderEnabled: Boolean = false,
-    val reminderTime: String = "09:00"
+    val reminderTime: String = "09:00",
+    val dailyNewLimit: Int = 20,
+    val dailyReviewLimit: Int = 100,
+    val ttsLang: String = "en",
+    val ttsSpeed: Float = 1f
 )

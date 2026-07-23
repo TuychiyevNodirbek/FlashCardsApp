@@ -29,6 +29,8 @@ class StatsRepository(private val dao: DailyStatsDao) {
             dao.addToDay(date, reviews, correct)
         }
     }
+
+    suspend fun clearAll() = dao.clearAll()
 }
 
 private fun DailyStatsEntity.toDomain(): DailyStats =

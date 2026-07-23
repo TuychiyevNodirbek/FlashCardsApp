@@ -27,4 +27,7 @@ interface DailyStatsDao {
         WHERE date = :date
     """)
     suspend fun addToDay(date: String, reviews: Int, correct: Int)
+
+    @Query("DELETE FROM daily_stats")
+    suspend fun clearAll()
 }

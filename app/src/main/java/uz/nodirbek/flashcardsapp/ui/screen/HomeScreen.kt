@@ -12,8 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,9 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.isSystemInDarkTheme
 import uz.nodirbek.flashcardsapp.R
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
@@ -54,13 +56,22 @@ fun HomeScreen(
         else viewModel.searchDecks(searchQuery, uiState.decks)
     }
 
-    val isDarkTheme = isSystemInDarkTheme()
-
     Scaffold(
-        containerColor = if (isDarkTheme) FdDarkBackground else FdBackground,
+        containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddDeckSheet = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape,
+                elevation = FloatingActionButtonDefaults.elevation(6.dp, 8.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Добавить колоду", modifier = Modifier.size(24.dp))
+            }
+        },
         topBar = {
             Surface(
-                color = if (isDarkTheme) FdDarkSurface else FdSurface,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 0.dp
             ) {
                 Column {
@@ -76,45 +87,28 @@ fun HomeScreen(
                             fontFamily = OutfitFamily,
                             fontWeight = FontWeight.Black,
                             fontSize = 22.sp,
-                            color = if (isDarkTheme) FdDarkText else FdText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
                         // Streak badge
                         Badge(
                             streak = uiState.streak,
                             icon = "🔥",
-                            bgColor = if (isDarkTheme) Color(0xFF3D2A1A) else FdOrangeLight,
-                            textColor = if (isDarkTheme) Color(0xFFFFB347) else FdOrange
+                            bgColor = FdOrangeLight,
+                            textColor = FdOrange
                         )
                         Spacer(Modifier.width(6.dp))
                         // XP badge
                         Badge(
                             streak = uiState.xp.toInt(),
                             icon = "⚡",
-                            bgColor = if (isDarkTheme) Color(0xFF3D3A1A) else Color(0xFFFFFBE6),
-                            textColor = if (isDarkTheme) Color(0xFFD4AF37) else Color(0xFFA07800)
+                            bgColor = Color(0xFFFFFBE6),
+                            textColor = Color(0xFFA07800)
                         )
                         Spacer(Modifier.width(8.dp))
                         // Search button
                         IconBox(onClick = { searchOpen = !searchOpen }) {
-                            Icon(painterResource(R.drawable.ic_search), contentDescription = "Поиск", tint = if (isDarkTheme) FdDarkTextSub else FdTextSub, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(Modifier.width(6.dp))
-                        // Add deck button
-                        Box(
-                            Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isDarkTheme) FdDarkPrimary else FdPrimary)
-                                .border(
-                                    width = 3.dp,
-                                    color = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .clickable { showAddDeckSheet = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Добавить", tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(painterResource(R.drawable.ic_search), contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                         }
                     }
                     // Search bar
@@ -124,27 +118,27 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(FdSurface2)
-                                .border(2.dp, if (searchQuery.isNotEmpty()) FdPrimary else FdBorder, RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(2.dp, if (searchQuery.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(painterResource(R.drawable.ic_search), null, tint = FdTextSub, modifier = Modifier.size(16.dp))
+                            Icon(painterResource(R.drawable.ic_search), null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
                             BasicTextField(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
                                 modifier = Modifier.weight(1f),
-                                textStyle = LocalTextStyle.current.copy(color = FdText, fontSize = 14.sp, fontFamily = InterFamily),
-                                cursorBrush = SolidColor(FdPrimary),
+                                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontFamily = InterFamily),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 decorationBox = { inner ->
-                                    if (searchQuery.isEmpty()) Text("Поиск колод...", color = FdTextSub, fontSize = 14.sp, fontFamily = InterFamily)
+                                    if (searchQuery.isEmpty()) Text("Поиск колод...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, fontFamily = InterFamily)
                                     inner()
                                 }
                             )
                         }
                     }
-                    Divider(color = if (isDarkTheme) FdDarkBorder else FdBorder, thickness = 1.5.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
                 }
             }
         }
@@ -227,7 +221,7 @@ private fun IconBox(onClick: () -> Unit, content: @Composable () -> Unit) {
         Modifier
             .size(36.dp)
             .clip(RoundedCornerShape(8.dp))
-            .border(1.5.dp, FdBorder, RoundedCornerShape(8.dp))
+            .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) { content() }
@@ -243,13 +237,13 @@ private fun DeckRow(
     onExpandClick: () -> Unit
 ) {
     val indentDp = (14 + depth * 20).dp
-    val indicatorColor = try { Color(android.graphics.Color.parseColor(deck.deck.colorHex)) } catch (e: Exception) { FdPrimary }
+    val indicatorColor = try { Color(android.graphics.Color.parseColor(deck.deck.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
 
     Column {
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(FdSurface)
+                .background(MaterialTheme.colorScheme.surface)
                 .clickable(onClick = onRowClick)
                 .padding(start = indentDp, end = 14.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -269,7 +263,7 @@ private fun DeckRow(
                     Modifier
                         .size(24.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .border(1.5.dp, FdBorder, RoundedCornerShape(6.dp))
+                        .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
                         .clickable(onClick = onExpandClick),
                     contentAlignment = Alignment.Center
                 ) {
@@ -279,7 +273,7 @@ private fun DeckRow(
                         modifier = Modifier
                             .size(14.dp)
                             .rotate(if (isExpanded) 90f else 0f),
-                        tint = FdTextSub
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -293,13 +287,13 @@ private fun DeckRow(
                     fontFamily = OutfitFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = FdText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
                 Text(
                     "${deck.totalCards} карт · ${deck.newCards} новых",
                     fontSize = 12.sp,
-                    color = FdTextSub,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -308,8 +302,8 @@ private fun DeckRow(
                 Box(
                     Modifier
                         .clip(CircleShape)
-                        .background(FdPrimary)
-                        .border(2.dp, FdPrimaryDark, CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                         .padding(horizontal = 11.dp, vertical = 5.dp)
                 ) {
                     Text(
@@ -317,14 +311,14 @@ private fun DeckRow(
                         fontFamily = OutfitFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             } else {
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = FdBorder, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
             }
         }
-        Divider(color = FdBorder, thickness = 1.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
     }
 }
 
@@ -341,10 +335,10 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
             Modifier
                 .size(88.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(FdPrimaryLight),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(painterResource(R.drawable.ic_deck_empty), null, tint = FdPrimary, modifier = Modifier.size(40.dp))
+            Icon(painterResource(R.drawable.ic_deck_empty), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
         }
         Spacer(Modifier.height(18.dp))
         Text(
@@ -352,13 +346,13 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
             fontFamily = OutfitFamily,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 20.sp,
-            color = FdText
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "Создайте первую колоду или импортируйте список слов",
             fontSize = 13.sp,
-            color = FdTextSub,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 20.sp,
             modifier = Modifier.widthIn(max = 220.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -369,8 +363,8 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
             Modifier
                 .width(220.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(FdPrimary)
-                .border(4.dp, FdPrimaryDark, RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary)
+                .border(4.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
                 .clickable(onClick = onCreateDeck)
                 .padding(14.dp),
             contentAlignment = Alignment.Center
@@ -380,7 +374,7 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
                 fontFamily = OutfitFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -389,8 +383,8 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
             Modifier
                 .width(220.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(FdSurface)
-                .border(1.5.dp, FdBorder, RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                 .clickable(onClick = onImport)
                 .padding(13.dp),
             contentAlignment = Alignment.Center
@@ -400,9 +394,39 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
                 fontFamily = OutfitFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
-                color = FdPrimary
+                color = MaterialTheme.colorScheme.primary
             )
         }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun EmptyHomeStatePreview() {
+    FlashCardsAppTheme {
+        EmptyHomeState(onCreateDeck = {}, onImport = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BadgePreview() {
+    FlashCardsAppTheme {
+        Badge(streak = 5, icon = "🔥", bgColor = FdOrangeLight, textColor = FdOrange)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DeckRowPreview() {
+    FlashCardsAppTheme {
+        val testDeck = DeckWithStats(
+            deck = uz.nodirbek.flashcardsapp.domain.model.Deck("1", "Тестовая колода", colorHex = "#4255FF"),
+            totalCards = 42,
+            newCards = 10,
+            dueCards = 5
+        )
+        DeckRow(deck = testDeck, depth = 0, isExpanded = false, todayDate = "2026-07-23", onRowClick = {}, onExpandClick = {})
     }
 }
 
@@ -410,32 +434,95 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
 @Composable
 private fun AddDeckBottomSheet(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = FdSurface) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
-            Text("Новая колода", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = FdText)
-            Spacer(Modifier.height(16.dp))
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrimColor = Color.Black.copy(alpha = 0.32f),
+        dragHandle = {
+            Box(
+                Modifier
+                    .padding(vertical = 12.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.outline)
+            )
+        }
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Новая колода",
+                    fontFamily = OutfitFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Название колоды") },
+                placeholder = { Text("Название колоды", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 14.sp
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = FdPrimary,
-                    unfocusedBorderColor = FdBorder
-                )
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                singleLine = true
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
+
             Box(
                 Modifier
                     .fillMaxWidth()
+                    .height(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (name.isNotBlank()) FdPrimary else FdBorder)
-                    .border(4.dp, if (name.isNotBlank()) FdPrimaryDark else FdBorder, RoundedCornerShape(12.dp))
-                    .clickable(enabled = name.isNotBlank()) { onAdd(name.trim()) }
-                    .padding(14.dp),
+                    .background(if (name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                    .border(4.dp, if (name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                    .clickable(enabled = name.isNotBlank()) { onAdd(name.trim()) },
                 contentAlignment = Alignment.Center
             ) {
-                Text("Создать", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                Text(
+                    "Создать колоду",
+                    fontFamily = OutfitFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
     }

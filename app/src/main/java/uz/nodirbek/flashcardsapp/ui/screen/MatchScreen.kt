@@ -38,11 +38,11 @@ fun MatchScreen(
     }
 
     if (cards.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(FdBackground), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🎯", fontSize = 48.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Нет карточек", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = FdText)
+                Text("Нет карточек", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(20.dp))
                 uz.nodirbek.flashcardsapp.ui.components.PressButton(
                     onClick = onBackClick, modifier = Modifier.width(160.dp).height(48.dp),
@@ -94,17 +94,17 @@ fun MatchScreen(
         }
     }
 
-    Scaffold(containerColor = FdBackground) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             // Top bar
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
+            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
                 Column {
                     Row(
                         Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onBackClick) { Icon(Icons.Default.Close, null, tint = FdText) }
-                        Text("Совпадение", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = FdText, modifier = Modifier.weight(1f))
+                        IconButton(onClick = onBackClick) { Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface) }
+                        Text("Совпадение", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                         val mins = elapsedSeconds / 60
                         val secs = elapsedSeconds % 60
                         Box(
@@ -122,7 +122,7 @@ fun MatchScreen(
                     LinearProgressIndicator(
                         progress = if (cards.isNotEmpty()) matched.size.toFloat() / cards.size else 0f,
                         modifier = Modifier.fillMaxWidth(),
-                        color = FdGreen, trackColor = FdBorder
+                        color = FdGreen, trackColor = MaterialTheme.colorScheme.outline
                     )
                 }
             }
@@ -146,13 +146,13 @@ fun MatchScreen(
                                 isMatched -> FdGreenLight
                                 isWrong -> FdRedLight
                                 isSelected -> FdPrimaryLight
-                                else -> FdSurface
+                                else -> MaterialTheme.colorScheme.surface
                             }
                             val borderColor = when {
                                 isMatched -> FdGreen
                                 isWrong -> FdRed
                                 isSelected -> FdPrimary
-                                else -> FdBorder
+                                else -> MaterialTheme.colorScheme.outline
                             }
 
                             Box(
@@ -193,7 +193,7 @@ fun MatchScreen(
                                         fontFamily = OutfitFamily,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp,
-                                        color = if (isSelected) FdPrimary else FdText,
+                                        color = if (isSelected) FdPrimary else MaterialTheme.colorScheme.onSurface,
                                         textAlign = TextAlign.Center,
                                         maxLines = 2,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,

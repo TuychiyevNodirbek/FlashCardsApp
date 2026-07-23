@@ -22,6 +22,7 @@ import uz.nodirbek.flashcardsapp.domain.usecase.GetForgettingEdgeCardsUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 
 @Composable
 fun ForgettingEdgeScreen(
@@ -36,32 +37,27 @@ fun ForgettingEdgeScreen(
         GetForgettingEdgeCardsUseCase().invoke(deckCards)
     }
 
-    Scaffold(containerColor = FdBackground) { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            UnifiedAppBar(
+                title = "Грань забывания",
+                onBackClick = onBackClick,
+                showBackButton = true,
+                showDivider = true
+            )
+        }
+    ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            // Top bar
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
-                Column {
-                    Row(
-                        Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, null, tint = FdText) }
-                        Column(Modifier.weight(1f)) {
-                            Text("Грань забывания", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = FdText)
-                        }
-                    }
-                    Divider(color = FdBorder, thickness = 1.5.dp)
-                }
-            }
 
             if (forgettingCards.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("✨", fontSize = 48.sp)
                         Spacer(Modifier.height(12.dp))
-                        Text("Всё под контролем!", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = FdText)
+                        Text("Всё под контролем!", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                         Spacer(Modifier.height(8.dp))
-                        Text("Нет карточек на грани забывания", fontSize = 13.sp, color = FdTextSub)
+                        Text("Нет карточек на грани забывания", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -88,7 +84,7 @@ fun ForgettingEdgeScreen(
                                     )
                                     Text(
                                         "Повторите их прямо сейчас",
-                                        fontSize = 12.sp, color = FdTextSub
+                                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -142,8 +138,8 @@ private fun ForgettingCardItem(item: GetForgettingEdgeCardsUseCase.ForgettingEdg
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(item.card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdText, maxLines = 1)
-                Text(item.card.back, fontSize = 12.sp, color = FdTextSub, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+                Text(item.card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                Text(item.card.back, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.End) {
@@ -158,7 +154,7 @@ private fun ForgettingCardItem(item: GetForgettingEdgeCardsUseCase.ForgettingEdg
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "${item.daysUntilForgotten}д",
-                    fontSize = 11.sp, color = FdTextSub, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold
                 )
             }
         }

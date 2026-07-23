@@ -1,7 +1,6 @@
 package uz.nodirbek.flashcardsapp.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -28,14 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import uz.nodirbek.flashcardsapp.ui.theme.FdBorder
-import uz.nodirbek.flashcardsapp.ui.theme.FdDarkBorder
-import uz.nodirbek.flashcardsapp.ui.theme.FdDarkPrimary
-import uz.nodirbek.flashcardsapp.ui.theme.FdDarkSurface
-import uz.nodirbek.flashcardsapp.ui.theme.FdDarkText
-import uz.nodirbek.flashcardsapp.ui.theme.FdPrimary
-import uz.nodirbek.flashcardsapp.ui.theme.FdSurface
-import uz.nodirbek.flashcardsapp.ui.theme.FdText
+import androidx.compose.material3.MaterialTheme
 import uz.nodirbek.flashcardsapp.ui.theme.OutfitFamily
 
 // ── Standard App Bar Height (UNIFIED) ──────────────────────────────────
@@ -44,16 +36,12 @@ const val APP_BAR_HEIGHT_DP = 54
 // ── Dynamic Color Helper ───────────────────────────────────────────────
 @Composable
 private fun getAppBarColors(): Pair<Color, Color> {
-    return if (isSystemInDarkTheme()) {
-        FdDarkSurface to FdDarkText
-    } else {
-        FdSurface to FdText
-    }
+    return MaterialTheme.colorScheme.surface to MaterialTheme.colorScheme.onSurface
 }
 
 @Composable
 private fun getDividerColor(): Color {
-    return if (isSystemInDarkTheme()) FdDarkBorder else FdBorder
+    return MaterialTheme.colorScheme.outline
 }
 
 // ── Main App Bar Component ────────────────────────────────────────────
@@ -86,7 +74,7 @@ fun UnifiedAppBar(
                 if (showBackButton && onBackClick != null) {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = textColor
                         )
@@ -119,7 +107,7 @@ fun UnifiedAppBar(
 
             // Divider
             if (showDivider) {
-                Divider(
+                HorizontalDivider(
                     color = dividerColor,
                     thickness = 1.5.dp
                 )
@@ -132,7 +120,7 @@ fun UnifiedAppBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp),
-                    color = if (isSystemInDarkTheme()) FdDarkPrimary else FdPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = dividerColor
                 )
             }
@@ -201,7 +189,7 @@ fun CloseableAppBar(
 
             // Divider
             if (showDivider) {
-                Divider(
+                HorizontalDivider(
                     color = dividerColor,
                     thickness = 1.5.dp
                 )
@@ -255,8 +243,8 @@ fun ProgressAppBar(
                                 .height(6.dp)
                                 .background(
                                     when {
-                                        idx < currentIndex -> if (isSystemInDarkTheme()) FdDarkPrimary else FdPrimary
-                                        idx == currentIndex -> if (isSystemInDarkTheme()) FdDarkPrimary.copy(alpha = 0.4f) else FdPrimary.copy(alpha = 0.4f)
+                                        idx < currentIndex -> MaterialTheme.colorScheme.primary
+                                        idx == currentIndex -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                                         else -> getDividerColor()
                                     }
                                 )
@@ -276,7 +264,7 @@ fun ProgressAppBar(
                 }
             }
 
-            Divider(
+            HorizontalDivider(
                 color = getDividerColor(),
                 thickness = 1.5.dp
             )

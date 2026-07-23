@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -24,6 +25,10 @@ class PreferencesDataStore(private val context: Context) {
         private val REMINDER_TIME_KEY = stringPreferencesKey("reminder_time")
         private val THEME_KEY = stringPreferencesKey("theme") // "light" | "dark" | "system"
         private val DAILY_GOAL_KEY = intPreferencesKey("daily_goal")
+        private val DAILY_NEW_LIMIT_KEY = intPreferencesKey("daily_new_limit")
+        private val DAILY_REVIEW_LIMIT_KEY = intPreferencesKey("daily_review_limit")
+        private val TTS_LANG_KEY = stringPreferencesKey("tts_lang") // "en" | "en-gb" | "ru" | "de"
+        private val TTS_SPEED_KEY = floatPreferencesKey("tts_speed")
     }
 
     val streak: Flow<Int> = context.dataStore.data.map { it[STREAK_KEY] ?: 0 }
@@ -34,6 +39,10 @@ class PreferencesDataStore(private val context: Context) {
     val reminderTime: Flow<String> = context.dataStore.data.map { it[REMINDER_TIME_KEY] ?: "09:00" }
     val theme: Flow<String> = context.dataStore.data.map { it[THEME_KEY] ?: "system" }
     val dailyGoal: Flow<Int> = context.dataStore.data.map { it[DAILY_GOAL_KEY] ?: 20 }
+    val dailyNewLimit: Flow<Int> = context.dataStore.data.map { it[DAILY_NEW_LIMIT_KEY] ?: 20 }
+    val dailyReviewLimit: Flow<Int> = context.dataStore.data.map { it[DAILY_REVIEW_LIMIT_KEY] ?: 100 }
+    val ttsLang: Flow<String> = context.dataStore.data.map { it[TTS_LANG_KEY] ?: "en" }
+    val ttsSpeed: Flow<Float> = context.dataStore.data.map { it[TTS_SPEED_KEY] ?: 1f }
 
     suspend fun setStreak(value: Int) {
         context.dataStore.edit { it[STREAK_KEY] = value }
@@ -79,5 +88,31 @@ class PreferencesDataStore(private val context: Context) {
 
     suspend fun setDailyGoal(value: Int) {
         context.dataStore.edit { it[DAILY_GOAL_KEY] = value }
+    }
+
+    suspend fun setDailyNewLimit(value: Int) {
+        context.dataStore.edit { it[DAILY_NEW_LIMIT_KEY] = value }
+    }
+
+    suspend fun setDailyReviewLimit(value: Int) {
+        context.dataStore.edit { it[DAILY_REVIEW_LIMIT_KEY] = value }
+    }
+
+    suspend fun setTtsLang(value: String) {
+        context.dataStore.edit { it[TTS_LANG_KEY] = value }
+    }
+
+    suspend fun setTtsSpeed(value: Float) {
+        context.dataStore.edit { it[TTS_SPEED_KEY] = value }
+    }
+
+    /** Wipes streak, record, XP and activity date; keeps theme and other settings. */
+    suspend fun resetProgress() {
+        context.dataStore.edit {
+            it[STREAK_KEY] = 0
+            it[STREAK_RECORD_KEY] = 0
+            it[XP_KEY] = 0L
+            it.remove(LAST_ACTIVE_DATE_KEY)
+        }
     }
 }

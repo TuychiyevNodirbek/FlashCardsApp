@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
@@ -115,4 +116,10 @@ private fun DoneStatBox(value: String, label: String, modifier: Modifier = Modif
             )
         }
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun ReviewDoneScreenPreview() {
+    ReviewDoneScreen(sessionCount = 15, accuracy = 0.85f, xpEarned = 120, streak = 5, onContinue = {})
 }

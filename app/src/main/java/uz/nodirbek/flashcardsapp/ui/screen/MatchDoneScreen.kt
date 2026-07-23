@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
@@ -93,4 +94,10 @@ private fun MatchStatBox(value: String, label: String, modifier: Modifier = Modi
             Text(label, fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
         }
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun MatchDoneScreenPreview() {
+    MatchDoneScreen(timeSeconds = 125, isNewRecord = true, bestSeconds = 145, onPlayAgain = {}, onDone = {})
 }

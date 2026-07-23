@@ -26,6 +26,7 @@ import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 @Composable
@@ -129,32 +130,14 @@ fun ImportScreen(
     }
 
     Scaffold(
-        containerColor = FdBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
-                Column {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(54.dp)
-                            .padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, null, tint = FdText)
-                        }
-                        Text(
-                            "Импорт карточек",
-                            fontFamily = OutfitFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
-                            color = FdText,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Divider(color = FdBorder, thickness = 1.5.dp)
-                }
-            }
+            UnifiedAppBar(
+                title = "Импорт карточек",
+                onBackClick = onBackClick,
+                showBackButton = true,
+                showDivider = true
+            )
         }
     ) { padding ->
         LazyColumn(
@@ -193,7 +176,7 @@ fun ImportScreen(
                             Text(
                                 "CSV, TSV — до 5000 строк",
                                 fontSize = 12.sp,
-                                color = FdTextSub
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -206,8 +189,8 @@ fun ImportScreen(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(FdSurface)
-                        .border(1.5.dp, FdBorder, RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                         .padding(16.dp)
                 ) {
                     Column {
@@ -216,7 +199,7 @@ fun ImportScreen(
                             fontFamily = OutfitFamily,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 14.sp,
-                            color = FdText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(10.dp))
                         FormatRow("Разделитель", "Tab (\\t), точка с запятой (;) или запятая (,)")
@@ -228,14 +211,14 @@ fun ImportScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(FdSurface2)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(12.dp)
                         ) {
                             Column {
                                 Text(
                                     "Пример CSV:",
                                     fontSize = 11.sp,
-                                    color = FdTextSub,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = 4.dp)
                                 )
                                 Text(
@@ -243,7 +226,7 @@ fun ImportScreen(
                                     fontFamily = OutfitFamily,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 12.sp,
-                                    color = FdText
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -259,14 +242,14 @@ fun ImportScreen(
                         fontFamily = OutfitFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
-                        color = FdTextSub,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 10.dp)
                     )
                     if (allDecks.isEmpty()) {
                         Text(
                             "Нет колод. Создайте колоду перед импортом.",
                             fontSize = 13.sp,
-                            color = FdTextSub
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 200.dp)) {
@@ -277,10 +260,10 @@ fun ImportScreen(
                                     Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isSelected) FdPrimaryLight else FdSurface)
+                                        .background(if (isSelected) FdPrimaryLight else MaterialTheme.colorScheme.surface)
                                         .border(
                                             1.5.dp,
-                                            if (isSelected) FdPrimary else FdBorder,
+                                            if (isSelected) FdPrimary else MaterialTheme.colorScheme.outline,
                                             RoundedCornerShape(10.dp)
                                         )
                                         .clickable { selectedDeckId = deck.deck.id }
@@ -298,12 +281,12 @@ fun ImportScreen(
                                                 fontFamily = OutfitFamily,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp,
-                                                color = FdText
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
                                                 "${deck.totalCards} карточек",
                                                 fontSize = 11.sp,
-                                                color = FdTextSub
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -316,8 +299,8 @@ fun ImportScreen(
                     PressButton(
                         onClick = { showCreateDeckDialog = true },
                         modifier = Modifier.fillMaxWidth().height(40.dp),
-                        color = FdSurface,
-                        shadowColor = FdBorder,
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowColor = MaterialTheme.colorScheme.outline,
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
@@ -354,7 +337,7 @@ fun ImportScreen(
                             Text(
                                 "Добавлено $importedCount карточек",
                                 fontSize = 13.sp,
-                                color = FdTextSub
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(14.dp))
                             PressButton(
@@ -396,7 +379,7 @@ fun ImportScreen(
                                 color = FdRed
                             )
                             Spacer(Modifier.height(4.dp))
-                            Text(message, fontSize = 13.sp, color = FdTextSub)
+                            Text(message, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -437,11 +420,11 @@ fun ImportScreen(
                     onValueChange = { newDeckName = it },
                     placeholder = { Text("Название колоды") },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(color = FdText),
+                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = FdSurface2,
-                        unfocusedContainerColor = FdSurface2,
-                        unfocusedIndicatorColor = FdBorder,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
                         focusedIndicatorColor = FdPrimary
                     )
                 )
@@ -468,16 +451,16 @@ fun ImportScreen(
                 PressButton(
                     onClick = { showCreateDeckDialog = false },
                     modifier = Modifier.height(40.dp),
-                    color = FdSurface,
-                    shadowColor = FdBorder,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowColor = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = FdText)
+                    Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             },
-            containerColor = FdSurface,
-            textContentColor = FdText,
-            titleContentColor = FdText
+            containerColor = MaterialTheme.colorScheme.surface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -488,12 +471,12 @@ private fun FormatRow(label: String, value: String) {
         Text(
             label,
             fontSize = 12.sp,
-            color = FdTextSub,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.width(90.dp)
         )
         Spacer(Modifier.width(8.dp))
-        Text(value, fontSize = 12.sp, color = FdText, modifier = Modifier.weight(1f))
+        Text(value, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
     }
 }
 

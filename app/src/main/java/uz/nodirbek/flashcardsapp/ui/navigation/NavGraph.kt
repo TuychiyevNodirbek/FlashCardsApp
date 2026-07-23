@@ -42,7 +42,9 @@ fun NavGraph(
             composable(
                 Screen.Home.route,
                 enterTransition = { BottomNavTransitions.enter() },
-                exitTransition = { BottomNavTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { BottomNavTransitions.exit() }
             ) {
                 HomeScreen(
                     viewModel = homeViewModel,
@@ -56,7 +58,9 @@ fun NavGraph(
             composable(
                 Screen.Stats.route,
                 enterTransition = { BottomNavTransitions.enter() },
-                exitTransition = { BottomNavTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { BottomNavTransitions.exit() }
             ) {
                 StatsScreen(viewModel = homeViewModel)
             }
@@ -64,7 +68,9 @@ fun NavGraph(
             composable(
                 Screen.Settings.route,
                 enterTransition = { SideModalTransitions.enter() },
-                exitTransition = { SideModalTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
             ) {
                 SettingsScreen(
                     viewModel = homeViewModel,
@@ -78,7 +84,9 @@ fun NavGraph(
                 route = Screen.Deck.route,
                 arguments = listOf(navArgument(Screen.Deck.ARG) { type = NavType.StringType }),
                 enterTransition = { DeckDetailTransitions.enter() },
-                exitTransition = { DeckDetailTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { DeckDetailTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Deck.ARG) ?: return@composable
                 DeckScreen(
@@ -98,7 +106,9 @@ fun NavGraph(
                 route = Screen.SrsReview.route,
                 arguments = listOf(navArgument(Screen.SrsReview.ARG) { type = NavType.StringType }),
                 enterTransition = { StudyTransitions.enter() },
-                exitTransition = { StudyTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { StudyTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.SrsReview.ARG) ?: return@composable
                 StudyScreen(
@@ -114,7 +124,9 @@ fun NavGraph(
             composable(
                 Screen.ReviewDone.route,
                 enterTransition = { ResultsTransitions.enter() },
-                exitTransition = { ResultsTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { ResultsTransitions.popExit() }
             ) {
                 ReviewDoneScreen(
                     sessionCount = 0,
@@ -130,7 +142,9 @@ fun NavGraph(
                 route = Screen.Flashcards.route,
                 arguments = listOf(navArgument(Screen.Flashcards.ARG) { type = NavType.StringType }),
                 enterTransition = { StudyTransitions.enter() },
-                exitTransition = { StudyTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { StudyTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Flashcards.ARG) ?: return@composable
                 FlashcardsScreen(
@@ -145,7 +159,9 @@ fun NavGraph(
                 route = Screen.TestSetup.route,
                 arguments = listOf(navArgument(Screen.TestSetup.ARG) { type = NavType.StringType }),
                 enterTransition = { GameSetupTransitions.enter() },
-                exitTransition = { GameSetupTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { GameSetupTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.TestSetup.ARG) ?: return@composable
                 TestSetupScreen(
@@ -162,7 +178,9 @@ fun NavGraph(
                 route = Screen.Test.route,
                 arguments = listOf(navArgument(Screen.Test.ARG) { type = NavType.StringType }),
                 enterTransition = { GameSetupTransitions.enter() },
-                exitTransition = { GameSetupTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { GameSetupTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Test.ARG) ?: return@composable
                 TestScreen(
@@ -181,7 +199,9 @@ fun NavGraph(
             composable(
                 Screen.TestResults.route,
                 enterTransition = { ResultsTransitions.enter() },
-                exitTransition = { ResultsTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { ResultsTransitions.popExit() }
             ) {
                 TestResultsScreen(
                     results = testResults,
@@ -195,7 +215,9 @@ fun NavGraph(
                 route = Screen.Match.route,
                 arguments = listOf(navArgument(Screen.Match.ARG) { type = NavType.StringType }),
                 enterTransition = { GameSetupTransitions.enter() },
-                exitTransition = { GameSetupTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { GameSetupTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Match.ARG) ?: return@composable
                 MatchScreen(
@@ -214,7 +236,9 @@ fun NavGraph(
             composable(
                 Screen.MatchDone.route,
                 enterTransition = { ResultsTransitions.enter() },
-                exitTransition = { ResultsTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { ResultsTransitions.popExit() }
             ) {
                 MatchDoneScreen(
                     timeSeconds = matchTimeSeconds,
@@ -232,7 +256,9 @@ fun NavGraph(
                 route = Screen.ForgettingEdge.route,
                 arguments = listOf(navArgument(Screen.ForgettingEdge.ARG) { type = NavType.StringType }),
                 enterTransition = { ForgettingEdgeTransitions.enter() },
-                exitTransition = { ForgettingEdgeTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { ForgettingEdgeTransitions.popExit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.ForgettingEdge.ARG) ?: return@composable
                 ForgettingEdgeScreen(
@@ -247,7 +273,9 @@ fun NavGraph(
             composable(
                 Screen.Import.route,
                 enterTransition = { SideModalTransitions.enter() },
-                exitTransition = { SideModalTransitions.exit() }
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
             ) {
                 ImportScreen(
                     viewModel = homeViewModel,

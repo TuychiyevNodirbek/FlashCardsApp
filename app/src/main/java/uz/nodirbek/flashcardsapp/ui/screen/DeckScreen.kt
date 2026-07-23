@@ -13,7 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.domain.model.Card
@@ -29,7 +30,7 @@ import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
-private enum class CardFilter { ALL, NEW, DUE, KNOWN }
+private enum class CardFilter { ALL, NEW, LEARNING, DUE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,8 +63,8 @@ fun DeckScreen(
         when (activeFilter) {
             CardFilter.ALL -> deckCards
             CardFilter.NEW -> deckCards.filter { it.reps == 0 }
+            CardFilter.LEARNING -> deckCards.filter { it.reps > 0 && it.dueDate > today }
             CardFilter.DUE -> deckCards.filter { it.dueDate <= today && it.reps > 0 }
-            CardFilter.KNOWN -> deckCards.filter { it.reps > 0 && it.dueDate > today }
         }
     }
 
@@ -73,9 +74,9 @@ fun DeckScreen(
     }
 
     Scaffold(
-        containerColor = FdBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
+            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
                 Column {
                     Row(
                         Modifier
@@ -85,7 +86,7 @@ fun DeckScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, null, tint = FdText)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = MaterialTheme.colorScheme.onSurface)
                         }
                         Box(
                             Modifier
@@ -100,14 +101,69 @@ fun DeckScreen(
                             fontFamily = OutfitFamily,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 18.sp,
-                            color = FdText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { showAddCardSheet = true }) {
                             Icon(Icons.Default.Add, null, tint = FdPrimary)
                         }
                     }
-                    Divider(color = FdBorder, thickness = 1.5.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
+                }
+            }
+        },
+        bottomBar = {
+            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StudyModeBtn(
+                        label = "Карточки", emoji = "🃏",
+                        color = FdGreen, shadowColor = FdGreenDark,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToFlashcards(deckId) }
+                    )
+                    Box(Modifier.weight(1f)) {
+                        StudyModeBtn(
+                            label = "Учить SRS", emoji = "🔄",
+                            color = FdPrimary, shadowColor = FdPrimaryDark,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onNavigateToSrs(deckId) }
+                        )
+                        if ((deckWithStats?.dueCards ?: 0) > 0) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 4.dp, y = (-4).dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(FdRed),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "${deckWithStats?.dueCards}",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                    StudyModeBtn(
+                        label = "Тест", emoji = "✏️",
+                        color = FdOrange, shadowColor = FdOrangeDark,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToTestSetup(deckId) }
+                    )
+                    StudyModeBtn(
+                        label = "Match", emoji = "🎯",
+                        color = FdPurple, shadowColor = FdPurpleDark,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToMatch(deckId) }
+                    )
                 }
             }
         }
@@ -116,119 +172,79 @@ fun DeckScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(bottom = 8.dp)
         ) {
             // Stats row
             item {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .background(FdSurface)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatPill("${deckWithStats?.totalCards ?: 0}", "Всего", FdTextSub, Modifier.weight(1f))
+                    StatPill("${deckWithStats?.totalCards ?: 0}", "Всего", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
                     StatPill("${deckWithStats?.newCards ?: 0}", "Новых", FdPrimary, Modifier.weight(1f))
-                    StatPill("${deckWithStats?.dueCards ?: 0}", "К повтору", FdOrange, Modifier.weight(1f))
+                    StatPill("${deckWithStats?.dueCards ?: 0}", "Учится", FdOrange, Modifier.weight(1f))
                     StatPill(
                         "${((deckWithStats?.totalCards ?: 0) - (deckWithStats?.newCards ?: 0) - (deckWithStats?.dueCards ?: 0)).coerceAtLeast(0)}",
-                        "Изучено",
-                        FdGreen,
+                        "Сегодня",
+                        FdRed,
                         Modifier.weight(1f)
                     )
                 }
-                Divider(color = FdBorder, thickness = 1.dp)
-                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
             }
 
-            // Study mode buttons
-            item {
-                Column(Modifier.padding(horizontal = 14.dp)) {
-                    Text(
-                        "Режим обучения",
-                        fontFamily = OutfitFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = FdTextSub
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StudyModeBtn(
-                            label = "Повторение", emoji = "🧠",
-                            color = FdPrimary, shadowColor = FdPrimaryDark,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onNavigateToSrs(deckId) }
-                        )
-                        StudyModeBtn(
-                            label = "Карточки", emoji = "📋",
-                            color = FdGreen, shadowColor = FdGreenDark,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onNavigateToFlashcards(deckId) }
-                        )
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StudyModeBtn(
-                            label = "Тест", emoji = "✏️",
-                            color = FdOrange, shadowColor = FdOrangeDark,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onNavigateToTestSetup(deckId) }
-                        )
-                        StudyModeBtn(
-                            label = "Совпадение", emoji = "🎯",
-                            color = FdPurple, shadowColor = FdPurpleDark,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onNavigateToMatch(deckId) }
-                        )
-                    }
-                    if ((deckWithStats?.dueCards ?: 0) > 0) {
-                        Spacer(Modifier.height(8.dp))
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(FdRedLight)
-                                .border(2.dp, FdRed.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                .clickable { onNavigateToForgetting(deckId) }
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("⚠️", fontSize = 14.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    "Грань забывания · ${deckWithStats?.dueCards} карт",
-                                    fontFamily = OutfitFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = FdRed
-                                )
-                            }
+            // Forgetting edge warning
+            if ((deckWithStats?.dueCards ?: 0) > 0) {
+                item {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(FdOrangeLight)
+                            .border(1.5.dp, FdOrange.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .clickable { onNavigateToForgetting(deckId) }
+                            .padding(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⚠️", fontSize = 14.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "${deckWithStats?.dueCards} карточек на грани забывания",
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = FdOrangeDark,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text("›", fontSize = 16.sp, color = FdOrange)
                         }
                     }
                 }
-                Spacer(Modifier.height(20.dp))
             }
 
             // Filter chips
             item {
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 14.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(CardFilter.values()) { filter ->
                         val label = when (filter) {
                             CardFilter.ALL -> "Все"
                             CardFilter.NEW -> "Новые"
-                            CardFilter.DUE -> "К повтору"
-                            CardFilter.KNOWN -> "Изучено"
+                            CardFilter.LEARNING -> "Изучаются"
+                            CardFilter.DUE -> "Повторение"
                         }
                         val isActive = activeFilter == filter
                         Box(
                             Modifier
                                 .clip(CircleShape)
-                                .background(if (isActive) FdPrimary else FdSurface)
-                                .border(1.5.dp, if (isActive) FdPrimaryDark else FdBorder, CircleShape)
+                                .background(if (isActive) FdPrimary else MaterialTheme.colorScheme.surface)
+                                .border(1.5.dp, if (isActive) FdPrimaryDark else MaterialTheme.colorScheme.outline, CircleShape)
                                 .clickable { activeFilter = filter }
                                 .padding(horizontal = 14.dp, vertical = 7.dp)
                         ) {
@@ -237,12 +253,11 @@ fun DeckScreen(
                                 fontFamily = OutfitFamily,
                                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 12.sp,
-                                color = if (isActive) Color.White else FdText
+                                color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
             }
 
             // Card list
@@ -254,7 +269,7 @@ fun DeckScreen(
                             .padding(40.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Нет карточек", color = FdTextSub, fontSize = 14.sp)
+                        Text("Нет карточек", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
             } else {
@@ -276,7 +291,8 @@ fun DeckScreen(
             onSave = { card ->
                 viewModel.addCard(card)
                 showAddCardSheet = false
-            }
+            },
+            onSaveAndNext = { card -> viewModel.addCard(card) }
         )
     }
 
@@ -300,7 +316,7 @@ fun DeckScreen(
 private fun StatPill(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = color)
-        Text(label, fontSize = 11.sp, color = FdTextSub)
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -338,14 +354,14 @@ private fun CardListItem(card: Card, todayDate: String, onLongClick: () -> Unit 
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(FdSurface)
+                .background(MaterialTheme.colorScheme.surface)
                 .combinedClickable(onClick = {}, onLongClick = onLongClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = FdText, maxLines = 1)
-                Text(card.back, fontSize = 12.sp, color = FdTextSub, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                Text(card.back, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
             }
             Spacer(Modifier.width(8.dp))
             val badgeColor = when { isNew -> FdPrimary; isDue -> FdOrange; else -> FdGreen }
@@ -359,6 +375,23 @@ private fun CardListItem(card: Card, todayDate: String, onLongClick: () -> Unit 
                 Text(badgeLabel, fontSize = 11.sp, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, color = badgeColor)
             }
         }
-        Divider(color = FdBorder, thickness = 1.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CardRowPreview() {
+    FlashCardsAppTheme {
+        val testCard = Card(
+            id = "1",
+            deckId = "deck1",
+            front = "Hello",
+            back = "Привет",
+            dueDate = "2026-07-20",
+            createdAt = System.currentTimeMillis(),
+            reps = 0
+        )
+//        CardRow(card = testCard, todayDate = "2026-07-23", onLongClick = {})
     }
 }

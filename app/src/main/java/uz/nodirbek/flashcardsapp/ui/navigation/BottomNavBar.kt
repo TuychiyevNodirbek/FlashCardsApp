@@ -2,6 +2,7 @@ package uz.nodirbek.flashcardsapp.ui.navigation
 
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -24,7 +25,7 @@ private data class BottomNavItem(
 )
 
 private val items = listOf(
-    BottomNavItem(Screen.Home, "Главная", R.drawable.ic_nav_home, R.drawable.ic_nav_home_filled),
+    BottomNavItem(Screen.Home, "Колоды", R.drawable.ic_nav_home, R.drawable.ic_nav_home_filled),
     BottomNavItem(Screen.Stats, "Статистика", R.drawable.ic_nav_stats, R.drawable.ic_nav_stats_filled),
     BottomNavItem(Screen.Settings, "Настройки", R.drawable.ic_nav_settings, R.drawable.ic_nav_settings_filled)
 )
@@ -35,7 +36,7 @@ fun BottomNavBar(navController: NavController) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = androidx.compose.ui.unit.Dp.Hairline
     ) {
         items.forEach { item ->
@@ -67,11 +68,11 @@ fun BottomNavBar(navController: NavController) {
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF4255FF),
-                    selectedTextColor = Color(0xFF4255FF),
-                    unselectedIconColor = Color(0xFF6B6B80),
-                    unselectedTextColor = Color(0xFF6B6B80),
-                    indicatorColor = Color(0xFFEEF0FF)
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
         }

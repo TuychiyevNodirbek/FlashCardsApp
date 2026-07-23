@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
@@ -30,7 +31,7 @@ fun TestResultsScreen(
     val accuracy = if (total > 0) correct.toFloat() / total else 0f
     val mistakes = results.filter { !it.isCorrect }
 
-    Scaffold(containerColor = FdBackground) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp)
@@ -64,10 +65,10 @@ fun TestResultsScreen(
                             accuracy >= 0.5f -> "Неплохо!"
                             else -> "Нужно практиковаться"
                         },
-                        fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = FdText
+                        fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text("$correct из $total правильных", fontSize = 14.sp, color = FdTextSub)
+                    Text("$correct из $total правильных", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(20.dp))
 
                     // Stat row
@@ -85,7 +86,7 @@ fun TestResultsScreen(
                 item {
                     Text(
                         "Ошибки",
-                        fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdTextSub
+                        fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(10.dp))
                 }
@@ -99,7 +100,7 @@ fun TestResultsScreen(
                                 .padding(14.dp)
                         ) {
                             Column {
-                                Text(result.card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdText)
+                                Text(result.card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                                 Spacer(Modifier.height(4.dp))
                                 Text("Ваш ответ: ${result.userAnswer}", fontSize = 12.sp, color = FdRed)
                                 Text("Правильно: ${result.card.back}", fontSize = 12.sp, color = FdGreen)
@@ -149,7 +150,23 @@ private fun ResultStatBox(value: String, label: String, color: Color, modifier: 
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = color)
-            Text(label, fontSize = 11.sp, color = FdTextSub)
+            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun TestResultsScreenPreview() {
+    FlashCardsAppTheme {
+        fun previewCard(n: Int) = uz.nodirbek.flashcardsapp.domain.model.Card(
+            id = "$n", front = "Question $n", back = "Answer $n", dueDate = "", createdAt = 0L
+        )
+        val results = listOf(
+            TestResult(previewCard(1), "Answer 1", true),
+            TestResult(previewCard(2), "Wrong 2", false),
+            TestResult(previewCard(3), "Answer 3", true)
+        )
+        TestResultsScreen(results = results, onDone = {}, onRepeatMistakes = {})
     }
 }

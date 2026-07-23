@@ -7,7 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.isSystemInDarkTheme
+import uz.nodirbek.flashcardsapp.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,23 +40,25 @@ fun StudyScreen(
     onBackClick: () -> Unit,
     onSessionDone: (count: Int, accuracy: Float, xp: Int) -> Unit = { _, _, _ -> }
 ) {
-    val isDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = LocalIsDarkTheme.current
     val uiState by viewModel.uiState.collectAsState()
-    val sessionCards = remember(uiState.cards, deckId) {
-        val today = uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase.getTodayDate()
-        val cards = uiState.cards.filter { it.deckId == deckId && it.dueDate <= today }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val ttsManager = remember { uz.nodirbek.flashcardsapp.tts.TtsManager(context) }
+    DisposableEffect(Unit) { onDispose { ttsManager.shutdown() } }
+    val sessionCards = remember(uiState.cards, deckId, uiState.dailyNewLimit, uiState.dailyReviewLimit) {
+        val cards = viewModel.getDueCardsForDeck(deckId)
             .ifEmpty { uiState.cards.filter { it.deckId == deckId } }
         mutableStateListOf(*cards.toTypedArray())
     }
 
     if (sessionCards.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(if (isDarkTheme) FdDarkBackground else FdBackground), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🎉", fontSize = 48.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Нечего повторять!", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = if (isDarkTheme) FdDarkText else FdText)
+                Text("Нечего повторять!", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(8.dp))
-                Text("Все карточки изучены на сегодня", fontSize = 13.sp, color = if (isDarkTheme) FdDarkTextSub else FdTextSub)
+                Text("Все карточки изучены на сегодня", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(24.dp))
                 PressButton(
                     onClick = onBackClick,
@@ -75,7 +77,8 @@ fun StudyScreen(
             onRateCard = { cardId, quality -> viewModel.rateCard(cardId, quality) },
             onBack = onBackClick,
             onDone = onSessionDone,
-            isDarkTheme = isDarkTheme
+            isDarkTheme = isDarkTheme,
+            onSpeak = { text -> ttsManager.speak(text, uiState.ttsLang, uiState.ttsSpeed) }
         )
     }
 }
@@ -87,7 +90,8 @@ private fun SrsSessionContent(
     onRateCard: (String, Int) -> Unit,
     onBack: () -> Unit,
     onDone: (Int, Float, Int) -> Unit,
-    isDarkTheme: Boolean = isSystemInDarkTheme()
+    isDarkTheme: Boolean = LocalIsDarkTheme.current,
+    onSpeak: (String) -> Unit = {}
 ) {
     var currentIndex by remember { mutableIntStateOf(0) }
     var isFlipped by remember { mutableStateOf(false) }
@@ -131,10 +135,10 @@ private fun SrsSessionContent(
     Column(
         Modifier
             .fillMaxSize()
-            .background(if (isDarkTheme) FdDarkBackground else FdBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // ── Top bar ──────────────────────────────────────────────────────
-        Surface(color = if (isDarkTheme) FdDarkSurface else FdSurface, shadowElevation = 0.dp) {
+        Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
             Column {
                 Row(
                     Modifier
@@ -144,7 +148,7 @@ private fun SrsSessionContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.Close, null, tint = if (isDarkTheme) FdDarkText else FdText)
+                        Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface)
                     }
                     // Segmented progress
                     Row(
@@ -163,7 +167,7 @@ private fun SrsSessionContent(
                                         when {
                                             idx < currentIndex -> FdPrimary
                                             idx == currentIndex -> FdPrimary.copy(alpha = 0.4f)
-                                            else -> if (isDarkTheme) FdDarkBorder else FdBorder
+                                            else -> MaterialTheme.colorScheme.outline
                                         }
                                     )
                             )
@@ -186,7 +190,7 @@ private fun SrsSessionContent(
                     }
                     Spacer(Modifier.width(8.dp))
                 }
-                Divider(color = if (isDarkTheme) FdDarkBorder else FdBorder, thickness = 1.5.dp)
+                Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
             }
         }
 
@@ -313,8 +317,8 @@ private fun SrsSessionContent(
                         Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isDarkTheme) FdDarkSurface else FdSurface)
-                            .border(2.dp, if (isDarkTheme) FdDarkBorder else FdBorder, RoundedCornerShape(20.dp)),
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
@@ -339,13 +343,23 @@ private fun SrsSessionContent(
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 30.sp,
                                 textAlign = TextAlign.Center,
-                                color = if (isDarkTheme) FdDarkText else FdText
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            Spacer(Modifier.height(20.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(FdPrimaryLight)
+                                    .clickable { onSpeak(card.front) }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text("🔊", fontSize = 16.sp)
+                            }
+                            Spacer(Modifier.height(12.dp))
                             Text(
                                 "Нажмите для переворота",
                                 fontSize = 11.sp,
-                                color = if (isDarkTheme) FdDarkTextSub else FdTextSub
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -355,7 +369,7 @@ private fun SrsSessionContent(
                         Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isDarkTheme) Color(0xFF0F0F14) else FdText)
+                            .background(if (isDarkTheme) Color(0xFF0F0F14) else MaterialTheme.colorScheme.onSurface)
                             .graphicsLayer { rotationY = 180f },
                         contentAlignment = Alignment.Center
                     ) {
@@ -400,11 +414,11 @@ private fun SrsSessionContent(
                 PressButton(
                     onClick = { isFlipped = true },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    color = if (isDarkTheme) FdDarkSurface else FdSurface,
-                    shadowColor = if (isDarkTheme) FdDarkBorder else FdBorder,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowColor = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("Показать ответ", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = if (isDarkTheme) FdDarkText else FdText)
+                    Text("Показать ответ", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             } else {
                 // Rating row 1
@@ -412,9 +426,9 @@ private fun SrsSessionContent(
                     RatingBtn(
                         label = "Забыл",
                         emoji = "✕",
-                        color = if (isDarkTheme) FdDarkSurface else FdSurface,
-                        shadowColor = if (isDarkTheme) FdDarkBorder else FdBorder,
-                        textColor = if (isDarkTheme) FdDarkText else FdText,
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowColor = MaterialTheme.colorScheme.outline,
+                        textColor = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     ) {
                         onRateCard(card.id, 0)
@@ -441,7 +455,7 @@ private fun SrsSessionContent(
                     RatingBtn(
                         label = "Хорошо",
                         emoji = "✓",
-                        color = if (isDarkTheme) FdDarkPrimary else FdPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         shadowColor = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
                         textColor = Color.White,
                         modifier = Modifier.weight(1f)
@@ -495,12 +509,12 @@ private fun RatingBtn(
 @Composable
 private fun ReviewDoneInline(
     reviewed: Int, accuracy: Float, xp: Int, streak: Int, onBack: () -> Unit,
-    isDarkTheme: Boolean = isSystemInDarkTheme()
+    isDarkTheme: Boolean = LocalIsDarkTheme.current
 ) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(if (isDarkTheme) FdDarkPrimary else FdPrimary)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

@@ -53,6 +53,7 @@ class HomeViewModel(
             }
         }
         viewModelScope.launch { preferencesDataStore.streak.collect { s -> _uiState.update { it.copy(streak = s) } } }
+        viewModelScope.launch { preferencesDataStore.streakRecord.collect { r -> _uiState.update { it.copy(streakRecord = r) } } }
         viewModelScope.launch { preferencesDataStore.xp.collect { xp -> _uiState.update { it.copy(xp = xp, level = (xp / 100).toInt() + 1) } } }
         viewModelScope.launch { statsRepository.getLast7Days().collect { stats -> _uiState.update { it.copy(last7DaysStats = stats) } } }
         viewModelScope.launch { statsRepository.getAllStats().collect { stats -> _uiState.update { it.copy(allStats = stats) } } }
@@ -60,6 +61,10 @@ class HomeViewModel(
         viewModelScope.launch { preferencesDataStore.dailyGoal.collect { g -> _uiState.update { it.copy(dailyGoal = g) } } }
         viewModelScope.launch { preferencesDataStore.reminderEnabled.collect { e -> _uiState.update { it.copy(reminderEnabled = e) } } }
         viewModelScope.launch { preferencesDataStore.reminderTime.collect { t -> _uiState.update { it.copy(reminderTime = t) } } }
+        viewModelScope.launch { preferencesDataStore.dailyNewLimit.collect { v -> _uiState.update { it.copy(dailyNewLimit = v) } } }
+        viewModelScope.launch { preferencesDataStore.dailyReviewLimit.collect { v -> _uiState.update { it.copy(dailyReviewLimit = v) } } }
+        viewModelScope.launch { preferencesDataStore.ttsLang.collect { v -> _uiState.update { it.copy(ttsLang = v) } } }
+        viewModelScope.launch { preferencesDataStore.ttsSpeed.collect { v -> _uiState.update { it.copy(ttsSpeed = v) } } }
     }
 
     private fun buildDeckTree(decks: List<Deck>, cards: List<Card>): List<DeckWithStats> {
@@ -136,9 +141,14 @@ class HomeViewModel(
         viewModelScope.launch { cardRepository.deleteCard(card) }
     }
 
+    /** Due queue for a deck, capped by the daily limits from Settings. */
     fun getDueCardsForDeck(deckId: String): List<Card> {
         val today = RateCardUseCase.getTodayDate()
-        return _uiState.value.cards.filter { it.deckId == deckId && it.dueDate <= today }
+        val state = _uiState.value
+        val due = state.cards.filter { it.deckId == deckId && it.dueDate <= today }
+        val newCards = due.filter { it.reps == 0 }.take(state.dailyNewLimit)
+        val reviewCards = due.filter { it.reps > 0 }.take(state.dailyReviewLimit)
+        return newCards + reviewCards
     }
 
     fun getCardsForDeck(deckId: String): List<Card> =
@@ -158,6 +168,36 @@ class HomeViewModel(
 
     fun setReminderTime(value: String) {
         viewModelScope.launch { preferencesDataStore.setReminderTime(value) }
+    }
+
+    fun setDailyNewLimit(value: Int) {
+        viewModelScope.launch { preferencesDataStore.setDailyNewLimit(value.coerceIn(1, 100)) }
+    }
+
+    fun setDailyReviewLimit(value: Int) {
+        viewModelScope.launch { preferencesDataStore.setDailyReviewLimit(value.coerceIn(10, 500)) }
+    }
+
+    fun setTtsLang(value: String) {
+        viewModelScope.launch { preferencesDataStore.setTtsLang(value) }
+    }
+
+    fun setTtsSpeed(value: Float) {
+        viewModelScope.launch { preferencesDataStore.setTtsSpeed(value.coerceIn(0.5f, 2f)) }
+    }
+
+    /** Full progress reset: streak/XP/daily stats and SRS state of every card. */
+    fun resetProgress() {
+        viewModelScope.launch {
+            preferencesDataStore.resetProgress()
+            statsRepository.clearAll()
+            val today = RateCardUseCase.getTodayDate()
+            _uiState.value.cards.forEach { card ->
+                cardRepository.updateCard(
+                    card.copy(ease = 2.5f, reps = 0, interval = 0, dueDate = today, lastReviewed = null)
+                )
+            }
+        }
     }
 
     fun searchDecks(

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "FlashCardsApp",
+      "runtimeExecutable": "gradlew.bat",
+      "runtimeArgs": ["installDebug", "startDebugBridge"],
+      "port": 5555,
+      "cwd": "."
+    }
+  ]
+}

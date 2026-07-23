@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 
 @Composable
 fun TestSetupScreen(
@@ -39,18 +40,18 @@ fun TestSetupScreen(
         add(totalCards)
     }.distinct().sorted()
 
-    Scaffold(containerColor = FdBackground) { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            UnifiedAppBar(
+                title = "Настройки теста",
+                onBackClick = onBackClick,
+                showBackButton = true,
+                showDivider = true
+            )
+        }
+    ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            // ── Top bar ────────────────────────────────────────────────
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
-                Column {
-                    Row(Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, null, tint = FdText) }
-                        Text("Настройки теста", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = FdText)
-                    }
-                    Divider(color = FdBorder, thickness = 1.5.dp)
-                }
-            }
 
             Column(Modifier.fillMaxWidth().padding(20.dp)) {
                 Spacer(Modifier.height(8.dp))
@@ -65,8 +66,8 @@ fun TestSetupScreen(
                             Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (selected) FdPrimary else FdSurface)
-                                .border(2.dp, if (selected) FdPrimaryDark else FdBorder, RoundedCornerShape(10.dp))
+                                .background(if (selected) FdPrimary else MaterialTheme.colorScheme.surface)
+                                .border(2.dp, if (selected) FdPrimaryDark else MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
                                 .clickable { selectedCount = count }
                                 .padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center
@@ -76,7 +77,7 @@ fun TestSetupScreen(
                                 fontFamily = OutfitFamily,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 18.sp,
-                                color = if (selected) Color.White else FdText
+                                color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -86,7 +87,7 @@ fun TestSetupScreen(
                 Text(
                     "Или выберите: $selectedCount",
                     fontSize = 13.sp,
-                    color = FdTextSub,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = OutfitFamily,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -98,7 +99,7 @@ fun TestSetupScreen(
                     colors = SliderDefaults.colors(
                         thumbColor = FdPrimary,
                         activeTrackColor = FdPrimary,
-                        inactiveTrackColor = FdBorder
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline
                     )
                 )
 
@@ -141,11 +142,11 @@ fun TestSetupScreen(
                         Column {
                             Text(
                                 "$selectedCount вопросов · ${if (isWritten) "Письменный" else "Выбор ответа"}",
-                                fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdText
+                                fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 "из $totalCards карточек в колоде",
-                                fontSize = 12.sp, color = FdTextSub
+                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -167,7 +168,7 @@ fun TestSetupScreen(
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FdTextSub)
+    Text(text, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
@@ -175,8 +176,8 @@ private fun TypeOption(label: String, emoji: String, selected: Boolean, modifier
     Box(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) FdPrimary else FdSurface)
-            .border(2.dp, if (selected) FdPrimaryDark else FdBorder, RoundedCornerShape(12.dp))
+            .background(if (selected) FdPrimary else MaterialTheme.colorScheme.surface)
+            .border(2.dp, if (selected) FdPrimaryDark else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         contentAlignment = Alignment.Center
@@ -189,7 +190,7 @@ private fun TypeOption(label: String, emoji: String, selected: Boolean, modifier
                 fontFamily = OutfitFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
-                color = if (selected) Color.White else FdText,
+                color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
