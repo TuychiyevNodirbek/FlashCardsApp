@@ -25,11 +25,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.isSystemInDarkTheme
 import uz.nodirbek.flashcardsapp.R
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 
 @Composable
 fun HomeScreen(
@@ -49,17 +51,18 @@ fun HomeScreen(
 
     val filteredDecks = remember(uiState.decks, searchQuery) {
         if (searchQuery.isBlank()) uiState.decks
-        else uiState.decks.filter { it.deck.name.contains(searchQuery, ignoreCase = true) }
+        else viewModel.searchDecks(searchQuery, uiState.decks)
     }
 
-    Scaffold(containerColor = FdBackground) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // ── Top Bar ───────────────────────────────────────────────
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
+    val isDarkTheme = isSystemInDarkTheme()
+
+    Scaffold(
+        containerColor = if (isDarkTheme) FdDarkBackground else FdBackground,
+        topBar = {
+            Surface(
+                color = if (isDarkTheme) FdDarkSurface else FdSurface,
+                shadowElevation = 0.dp
+            ) {
                 Column {
                     Row(
                         Modifier
@@ -73,28 +76,28 @@ fun HomeScreen(
                             fontFamily = OutfitFamily,
                             fontWeight = FontWeight.Black,
                             fontSize = 22.sp,
-                            color = FdText,
+                            color = if (isDarkTheme) FdDarkText else FdText,
                             modifier = Modifier.weight(1f)
                         )
                         // Streak badge
                         Badge(
                             streak = uiState.streak,
                             icon = "🔥",
-                            bgColor = FdOrangeLight,
-                            textColor = FdOrange
+                            bgColor = if (isDarkTheme) Color(0xFF3D2A1A) else FdOrangeLight,
+                            textColor = if (isDarkTheme) Color(0xFFFFB347) else FdOrange
                         )
                         Spacer(Modifier.width(6.dp))
                         // XP badge
                         Badge(
                             streak = uiState.xp.toInt(),
                             icon = "⚡",
-                            bgColor = Color(0xFFFFFBE6),
-                            textColor = Color(0xFFA07800)
+                            bgColor = if (isDarkTheme) Color(0xFF3D3A1A) else Color(0xFFFFFBE6),
+                            textColor = if (isDarkTheme) Color(0xFFD4AF37) else Color(0xFFA07800)
                         )
                         Spacer(Modifier.width(8.dp))
                         // Search button
                         IconBox(onClick = { searchOpen = !searchOpen }) {
-                            Icon(painterResource(R.drawable.ic_search), contentDescription = "Поиск", tint = FdTextSub, modifier = Modifier.size(18.dp))
+                            Icon(painterResource(R.drawable.ic_search), contentDescription = "Поиск", tint = if (isDarkTheme) FdDarkTextSub else FdTextSub, modifier = Modifier.size(18.dp))
                         }
                         Spacer(Modifier.width(6.dp))
                         // Add deck button
@@ -102,10 +105,10 @@ fun HomeScreen(
                             Modifier
                                 .size(36.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(FdPrimary)
+                                .background(if (isDarkTheme) FdDarkPrimary else FdPrimary)
                                 .border(
                                     width = 3.dp,
-                                    color = FdPrimaryDark,
+                                    color = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .clickable { showAddDeckSheet = true },
@@ -141,11 +144,13 @@ fun HomeScreen(
                             )
                         }
                     }
-                    Divider(color = FdBorder, thickness = 1.5.dp)
+                    Divider(color = if (isDarkTheme) FdDarkBorder else FdBorder, thickness = 1.5.dp)
                 }
             }
-
-            // ── Deck List or Empty State ───────────────────────────────
+        }
+    ) { padding ->
+        // ── Deck List or Empty State ───────────────────────────────
+        Column(Modifier.fillMaxSize().padding(padding)) {
             if (uiState.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = FdPrimary)

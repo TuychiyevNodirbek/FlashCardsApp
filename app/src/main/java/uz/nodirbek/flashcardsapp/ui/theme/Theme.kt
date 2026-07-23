@@ -28,12 +28,12 @@ private val LightColors = lightColorScheme(
 
 private val DarkColors = darkColorScheme(
     primary         = FdDarkPrimary,
-    onPrimary       = Color.White,
-    primaryContainer = Color(0xFF1A1F5C),
-    secondary       = Color(0xFF30D87F),
-    onSecondary     = Color.Black,
+    onPrimary       = FdDarkText,  // Light text on dark primary
+    primaryContainer = Color(0xFF1A2F6B),
+    secondary       = Color(0xFF4FD897),  // Lighter green for dark mode
+    onSecondary     = FdDarkText,
     tertiary        = Color(0xFFA78BFA),
-    onTertiary      = Color.Black,
+    onTertiary      = FdDarkText,
     background      = FdDarkBackground,
     onBackground    = FdDarkText,
     surface         = FdDarkSurface,
@@ -41,8 +41,8 @@ private val DarkColors = darkColorScheme(
     surfaceVariant  = FdDarkSurface2,
     onSurfaceVariant = FdDarkTextSub,
     outline         = FdDarkBorder,
-    error           = Color(0xFFFF6B6B),
-    onError         = Color.Black
+    error           = Color(0xFFFF8F8F),
+    onError         = FdDarkText
 )
 
 @Composable

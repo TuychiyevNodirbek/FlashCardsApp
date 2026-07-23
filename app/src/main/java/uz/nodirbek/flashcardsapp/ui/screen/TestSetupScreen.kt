@@ -34,8 +34,10 @@ fun TestSetupScreen(
     var selectedCount by remember { mutableStateOf(10.coerceAtMost(totalCards.coerceAtLeast(1))) }
     var isWritten by remember { mutableStateOf(false) }
 
-    val countOptions = listOf(5, 10, 20, 50).filter { it <= totalCards }
-        .ifEmpty { listOf(totalCards.coerceAtLeast(1)) }
+    val countOptions = buildList {
+        addAll(listOf(5, 10, 20, 50).filter { it < totalCards })
+        add(totalCards)
+    }.distinct().sorted()
 
     Scaffold(containerColor = FdBackground) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ fun FlashcardsScreen(
     viewModel: HomeViewModel,
     onBackClick: () -> Unit
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
     val uiState by viewModel.uiState.collectAsState()
     val cards = remember(uiState.cards, deckId) { uiState.cards.filter { it.deckId == deckId } }
     val shuffledCards = remember(cards) { cards.shuffled() }
@@ -39,6 +41,7 @@ fun FlashcardsScreen(
 
     var currentIndex by remember { mutableStateOf(0) }
     var isFlipped by remember { mutableStateOf(false) }
+    var showCompletionDialog by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
         animationSpec = tween(420),
@@ -46,13 +49,13 @@ fun FlashcardsScreen(
     )
 
     if (cards.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(FdBackground), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(if (isDarkTheme) FdDarkBackground else FdBackground), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("📋", fontSize = 48.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Нет карточек", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = FdText)
+                Text("Нет карточек", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = if (isDarkTheme) FdDarkText else FdText)
                 Spacer(Modifier.height(8.dp))
-                Text("Добавьте карточки в колоду", fontSize = 13.sp, color = FdTextSub)
+                Text("Добавьте карточки в колоду", fontSize = 13.sp, color = if (isDarkTheme) FdDarkTextSub else FdTextSub)
                 Spacer(Modifier.height(24.dp))
                 PressButton(onClick = onBackClick, modifier = Modifier.width(160.dp).height(48.dp),
                     color = FdPrimary, shadowColor = FdPrimaryDark, shape = RoundedCornerShape(12.dp)) {
@@ -65,28 +68,28 @@ fun FlashcardsScreen(
 
     val card = displayCards.getOrNull(currentIndex)
 
-    Scaffold(containerColor = FdBackground) { padding ->
+    Scaffold(containerColor = if (isDarkTheme) FdDarkBackground else FdBackground) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             // ── Top bar ───────────────────────────────────────
-            Surface(color = FdSurface, shadowElevation = 0.dp) {
+            Surface(color = if (isDarkTheme) FdDarkSurface else FdSurface, shadowElevation = 0.dp) {
                 Column {
                     Row(
                         Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, null, tint = FdText)
+                            Icon(Icons.Default.ArrowBack, null, tint = if (isDarkTheme) FdDarkText else FdText)
                         }
                         Text(
                             "Карточки ${if (displayCards.isNotEmpty()) currentIndex + 1 else 0}/${displayCards.size}",
-                            fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = FdText,
+                            fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = if (isDarkTheme) FdDarkText else FdText,
                             modifier = Modifier.weight(1f)
                         )
                         // Shuffle button
                         Box(
                             Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .border(1.5.dp, FdBorder, RoundedCornerShape(8.dp))
+                                .border(1.5.dp, if (isDarkTheme) FdDarkBorder else FdBorder, RoundedCornerShape(8.dp))
                                 .clickable {
                                     displayCards = cards.shuffled()
                                     currentIndex = 0
@@ -103,7 +106,7 @@ fun FlashcardsScreen(
                         progress = if (displayCards.isNotEmpty()) (currentIndex + 1f) / displayCards.size else 0f,
                         modifier = Modifier.fillMaxWidth(),
                         color = FdPrimary,
-                        trackColor = FdBorder
+                        trackColor = if (isDarkTheme) FdDarkBorder else FdBorder
                     )
                 }
             }
@@ -130,19 +133,19 @@ fun FlashcardsScreen(
                                 Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(FdSurface)
-                                    .border(2.dp, FdBorder, RoundedCornerShape(20.dp)),
+                                    .background(if (isDarkTheme) FdDarkSurface else FdSurface)
+                                    .border(2.dp, if (isDarkTheme) FdDarkBorder else FdBorder, RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                                    Box(Modifier.clip(CircleShape).background(FdPrimaryLight).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                                        Text("ЛИЦО", fontSize = 10.sp, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, color = FdPrimary)
+                                    Box(Modifier.clip(CircleShape).background(if (isDarkTheme) Color(0xFF3D3A1A) else FdPrimaryLight).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                                        Text("ЛИЦО", fontSize = 10.sp, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, color = if (isDarkTheme) Color(0xFFD4AF37) else FdPrimary)
                                     }
                                     Spacer(Modifier.height(20.dp))
                                     Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp,
-                                        textAlign = TextAlign.Center, color = FdText)
+                                        textAlign = TextAlign.Center, color = if (isDarkTheme) FdDarkText else FdText)
                                     Spacer(Modifier.height(20.dp))
-                                    Text("Нажмите для переворота", fontSize = 11.sp, color = FdTextSub)
+                                    Text("Нажмите для переворота", fontSize = 11.sp, color = if (isDarkTheme) FdDarkTextSub else FdTextSub)
                                 }
                             }
                         } else {
@@ -150,7 +153,7 @@ fun FlashcardsScreen(
                                 Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(FdText)
+                                    .background(if (isDarkTheme) Color(0xFF0F0F14) else FdText)
                                     .graphicsLayer { rotationY = 180f },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -182,12 +185,12 @@ fun FlashcardsScreen(
                             }
                         },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        color = FdSurface,
-                        shadowColor = FdBorder,
+                        color = if (isDarkTheme) FdDarkSurface else FdSurface,
+                        shadowColor = if (isDarkTheme) FdDarkBorder else FdBorder,
                         shape = RoundedCornerShape(14.dp),
                         enabled = currentIndex > 0
                     ) {
-                        Text("← Назад", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdText)
+                        Text("← Назад", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = if (isDarkTheme) FdDarkText else FdText)
                     }
                     PressButton(
                         onClick = {
@@ -195,12 +198,12 @@ fun FlashcardsScreen(
                                 currentIndex++
                                 isFlipped = false
                             } else {
-                                onBackClick()
+                                showCompletionDialog = true
                             }
                         },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        color = FdPrimary,
-                        shadowColor = FdPrimaryDark,
+                        color = if (isDarkTheme) FdDarkPrimary else FdPrimary,
+                        shadowColor = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Text(
@@ -211,5 +214,46 @@ fun FlashcardsScreen(
                 }
             }
         }
+    }
+
+    if (showCompletionDialog) {
+        AlertDialog(
+            onDismissRequest = { showCompletionDialog = false },
+            title = { Text("Карточки пройдены", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+            text = { Text("Хотите начать заново или вернуться?", fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+            confirmButton = {
+                PressButton(
+                    onClick = {
+                        currentIndex = 0
+                        displayCards = cards.shuffled()
+                        isFlipped = false
+                        showCompletionDialog = false
+                    },
+                    modifier = Modifier.height(44.dp),
+                    color = if (isDarkTheme) FdDarkPrimary else FdPrimary,
+                    shadowColor = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Заново", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                }
+            },
+            dismissButton = {
+                PressButton(
+                    onClick = {
+                        onBackClick()
+                        showCompletionDialog = false
+                    },
+                    modifier = Modifier.height(44.dp),
+                    color = if (isDarkTheme) FdDarkSurface else FdSurface,
+                    shadowColor = if (isDarkTheme) FdDarkBorder else FdBorder,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Завершить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isDarkTheme) FdDarkText else FdText)
+                }
+            },
+            containerColor = if (isDarkTheme) FdDarkSurface else FdSurface,
+            textContentColor = if (isDarkTheme) FdDarkText else FdText,
+            titleContentColor = if (isDarkTheme) FdDarkText else FdText
+        )
     }
 }

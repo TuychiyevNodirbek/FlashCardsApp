@@ -159,4 +159,16 @@ class HomeViewModel(
     fun setReminderTime(value: String) {
         viewModelScope.launch { preferencesDataStore.setReminderTime(value) }
     }
+
+    fun searchDecks(
+        query: String,
+        decks: List<DeckWithStats>
+    ): List<DeckWithStats> {
+        return decks.filter { item ->
+            item.deck.name.contains(query, ignoreCase = true) ||
+            searchDecks(query, item.children).isNotEmpty()
+        }.map { item ->
+            item.copy(children = searchDecks(query, item.children))
+        }
+    }
 }

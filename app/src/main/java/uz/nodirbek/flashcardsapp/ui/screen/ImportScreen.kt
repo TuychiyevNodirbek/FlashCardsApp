@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,18 +26,31 @@ import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
+import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 @Composable
 fun ImportScreen(
+    viewModel: HomeViewModel,
     onCardsImported: (List<Card>) -> Unit,
     onBackClick: () -> Unit
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     var message by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var isSuccess by remember { mutableStateOf(false) }
     var importedCount by remember { mutableStateOf(0) }
     var isLoading by remember { mutableStateOf(false) }
+    var selectedDeckId by remember { mutableStateOf<String?>(null) }
+    var showCreateDeckDialog by remember { mutableStateOf(false) }
+    var newDeckName by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    val allDecks = uiState.decks.flatMap { listOf(it) + it.children.flatMap { child ->
+        fun flattenDecks(d: uz.nodirbek.flashcardsapp.ui.state.DeckWithStats): List<uz.nodirbek.flashcardsapp.ui.state.DeckWithStats> {
+            return listOf(d) + d.children.flatMap { flattenDecks(it) }
+        }
+        flattenDecks(child)
+    }}.distinctBy { it.deck.id }
 
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -85,6 +99,7 @@ fun ImportScreen(
                                     id = java.util.UUID.randomUUID().toString(),
                                     front = front,
                                     back = back,
+                                    deckId = selectedDeckId ?: "default",
                                     dueDate = today,
                                     createdAt = System.currentTimeMillis()
                                 )
@@ -236,6 +251,86 @@ fun ImportScreen(
                 }
             }
 
+            // Deck selection
+            item {
+                Column {
+                    Text(
+                        "Выберите колоду",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = FdTextSub,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                    if (allDecks.isEmpty()) {
+                        Text(
+                            "Нет колод. Создайте колоду перед импортом.",
+                            fontSize = 13.sp,
+                            color = FdTextSub
+                        )
+                    } else {
+                        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 200.dp)) {
+                            items(allDecks.size) { idx ->
+                                val deck = allDecks[idx]
+                                val isSelected = selectedDeckId == deck.deck.id
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isSelected) FdPrimaryLight else FdSurface)
+                                        .border(
+                                            1.5.dp,
+                                            if (isSelected) FdPrimary else FdBorder,
+                                            RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable { selectedDeckId = deck.deck.id }
+                                        .padding(12.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, null, tint = FdPrimary, modifier = Modifier.size(20.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                        }
+                                        Column {
+                                            Text(
+                                                deck.deck.name,
+                                                fontFamily = OutfitFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = FdText
+                                            )
+                                            Text(
+                                                "${deck.totalCards} карточек",
+                                                fontSize = 11.sp,
+                                                color = FdTextSub
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    PressButton(
+                        onClick = { showCreateDeckDialog = true },
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                        color = FdSurface,
+                        shadowColor = FdBorder,
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            "+ Новая колода",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = FdPrimary
+                        )
+                    }
+                }
+            }
+
             // Result / error
             if (isSuccess) {
                 item {
@@ -316,19 +411,74 @@ fun ImportScreen(
                         color = FdPrimary,
                         shadowColor = FdPrimaryDark,
                         shape = RoundedCornerShape(14.dp),
-                        enabled = !isLoading
+                        enabled = !isLoading && selectedDeckId != null
                     ) {
                         Text(
                             if (isLoading) "Загрузка..." else "Выбрать файл",
                             fontFamily = OutfitFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
-                            color = Color.White
+                            color = if (selectedDeckId != null) Color.White else Color.White.copy(alpha = 0.5f)
                         )
                     }
                 }
             }
         }
+    }
+
+    // Create deck dialog
+    if (showCreateDeckDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateDeckDialog = false },
+            title = { Text("Создать новую колоду", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            text = {
+                TextField(
+                    value = newDeckName,
+                    onValueChange = { newDeckName = it },
+                    placeholder = { Text("Название колоды") },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(color = FdText),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = FdSurface2,
+                        unfocusedContainerColor = FdSurface2,
+                        unfocusedIndicatorColor = FdBorder,
+                        focusedIndicatorColor = FdPrimary
+                    )
+                )
+            },
+            confirmButton = {
+                PressButton(
+                    onClick = {
+                        if (newDeckName.isNotBlank()) {
+                            viewModel.addDeck(newDeckName)
+                            newDeckName = ""
+                            showCreateDeckDialog = false
+                        }
+                    },
+                    modifier = Modifier.height(40.dp),
+                    color = FdPrimary,
+                    shadowColor = FdPrimaryDark,
+                    shape = RoundedCornerShape(10.dp),
+                    enabled = newDeckName.isNotBlank()
+                ) {
+                    Text("Создать", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                }
+            },
+            dismissButton = {
+                PressButton(
+                    onClick = { showCreateDeckDialog = false },
+                    modifier = Modifier.height(40.dp),
+                    color = FdSurface,
+                    shadowColor = FdBorder,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = FdText)
+                }
+            },
+            containerColor = FdSurface,
+            textContentColor = FdText,
+            titleContentColor = FdText
+        )
     }
 }
 

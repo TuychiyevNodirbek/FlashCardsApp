@@ -39,7 +39,11 @@ fun NavGraph(
         ) {
 
             // ── Bottom-nav roots ─────────────────────────────────────────
-            composable(Screen.Home.route) {
+            composable(
+                Screen.Home.route,
+                enterTransition = { BottomNavTransitions.enter() },
+                exitTransition = { BottomNavTransitions.exit() }
+            ) {
                 HomeScreen(
                     viewModel = homeViewModel,
                     onNavigateToStudy = { navController.navigate(Screen.SrsReview.createRoute("default")) },
@@ -49,11 +53,19 @@ fun NavGraph(
                 )
             }
 
-            composable(Screen.Stats.route) {
+            composable(
+                Screen.Stats.route,
+                enterTransition = { BottomNavTransitions.enter() },
+                exitTransition = { BottomNavTransitions.exit() }
+            ) {
                 StatsScreen(viewModel = homeViewModel)
             }
 
-            composable(Screen.Settings.route) {
+            composable(
+                Screen.Settings.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { SideModalTransitions.exit() }
+            ) {
                 SettingsScreen(
                     viewModel = homeViewModel,
                     onBackClick = { navController.popBackStack() },
@@ -64,7 +76,9 @@ fun NavGraph(
             // ── Deck detail ──────────────────────────────────────────────
             composable(
                 route = Screen.Deck.route,
-                arguments = listOf(navArgument(Screen.Deck.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.Deck.ARG) { type = NavType.StringType }),
+                enterTransition = { DeckDetailTransitions.enter() },
+                exitTransition = { DeckDetailTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Deck.ARG) ?: return@composable
                 DeckScreen(
@@ -82,7 +96,9 @@ fun NavGraph(
             // ── SRS Review ───────────────────────────────────────────────
             composable(
                 route = Screen.SrsReview.route,
-                arguments = listOf(navArgument(Screen.SrsReview.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.SrsReview.ARG) { type = NavType.StringType }),
+                enterTransition = { StudyTransitions.enter() },
+                exitTransition = { StudyTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.SrsReview.ARG) ?: return@composable
                 StudyScreen(
@@ -95,7 +111,11 @@ fun NavGraph(
                 )
             }
 
-            composable(Screen.ReviewDone.route) {
+            composable(
+                Screen.ReviewDone.route,
+                enterTransition = { ResultsTransitions.enter() },
+                exitTransition = { ResultsTransitions.exit() }
+            ) {
                 ReviewDoneScreen(
                     sessionCount = 0,
                     accuracy = 0f,
@@ -108,7 +128,9 @@ fun NavGraph(
             // ── Flashcards ───────────────────────────────────────────────
             composable(
                 route = Screen.Flashcards.route,
-                arguments = listOf(navArgument(Screen.Flashcards.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.Flashcards.ARG) { type = NavType.StringType }),
+                enterTransition = { StudyTransitions.enter() },
+                exitTransition = { StudyTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Flashcards.ARG) ?: return@composable
                 FlashcardsScreen(
@@ -121,7 +143,9 @@ fun NavGraph(
             // ── Test Setup → Test → Results ──────────────────────────────
             composable(
                 route = Screen.TestSetup.route,
-                arguments = listOf(navArgument(Screen.TestSetup.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.TestSetup.ARG) { type = NavType.StringType }),
+                enterTransition = { GameSetupTransitions.enter() },
+                exitTransition = { GameSetupTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.TestSetup.ARG) ?: return@composable
                 TestSetupScreen(
@@ -136,7 +160,9 @@ fun NavGraph(
 
             composable(
                 route = Screen.Test.route,
-                arguments = listOf(navArgument(Screen.Test.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.Test.ARG) { type = NavType.StringType }),
+                enterTransition = { GameSetupTransitions.enter() },
+                exitTransition = { GameSetupTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Test.ARG) ?: return@composable
                 TestScreen(
@@ -152,7 +178,11 @@ fun NavGraph(
                 )
             }
 
-            composable(Screen.TestResults.route) {
+            composable(
+                Screen.TestResults.route,
+                enterTransition = { ResultsTransitions.enter() },
+                exitTransition = { ResultsTransitions.exit() }
+            ) {
                 TestResultsScreen(
                     results = testResults,
                     onDone = { navController.popBackStack() },
@@ -163,7 +193,9 @@ fun NavGraph(
             // ── Match → Done ─────────────────────────────────────────────
             composable(
                 route = Screen.Match.route,
-                arguments = listOf(navArgument(Screen.Match.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.Match.ARG) { type = NavType.StringType }),
+                enterTransition = { GameSetupTransitions.enter() },
+                exitTransition = { GameSetupTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.Match.ARG) ?: return@composable
                 MatchScreen(
@@ -179,7 +211,11 @@ fun NavGraph(
                 )
             }
 
-            composable(Screen.MatchDone.route) {
+            composable(
+                Screen.MatchDone.route,
+                enterTransition = { ResultsTransitions.enter() },
+                exitTransition = { ResultsTransitions.exit() }
+            ) {
                 MatchDoneScreen(
                     timeSeconds = matchTimeSeconds,
                     isNewRecord = false,
@@ -194,7 +230,9 @@ fun NavGraph(
             // ── Forgetting Edge ──────────────────────────────────────────
             composable(
                 route = Screen.ForgettingEdge.route,
-                arguments = listOf(navArgument(Screen.ForgettingEdge.ARG) { type = NavType.StringType })
+                arguments = listOf(navArgument(Screen.ForgettingEdge.ARG) { type = NavType.StringType }),
+                enterTransition = { ForgettingEdgeTransitions.enter() },
+                exitTransition = { ForgettingEdgeTransitions.exit() }
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.ForgettingEdge.ARG) ?: return@composable
                 ForgettingEdgeScreen(
@@ -206,8 +244,13 @@ fun NavGraph(
             }
 
             // ── Import ────────────────────────────────────────────────────
-            composable(Screen.Import.route) {
+            composable(
+                Screen.Import.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { SideModalTransitions.exit() }
+            ) {
                 ImportScreen(
+                    viewModel = homeViewModel,
                     onCardsImported = { cards ->
                         homeViewModel.addCards(cards)
                         navController.popBackStack()

@@ -30,14 +30,14 @@ val FdOrangeLight  = Color(0xFFFFF4E5)
 val FdPurple       = Color(0xFF8F6CF6)
 val FdPurpleDark   = Color(0xFF6A4FCC)
 
-// Dark mode
+// Dark mode (updated for contrast 4.5:1+)
 val FdDarkBackground  = Color(0xFF0F0F14)
-val FdDarkSurface     = Color(0xFF1A1A22)
-val FdDarkSurface2    = Color(0xFF222229)
-val FdDarkText        = Color(0xFFEEEEF8)
-val FdDarkTextSub     = Color(0xFF88889A)
-val FdDarkBorder      = Color(0xFF2A2A36)
-val FdDarkPrimary     = Color(0xFF6374FF)
+val FdDarkSurface     = Color(0xFF1A1815)  // Updated from #1A1A22
+val FdDarkSurface2    = Color(0xFF222219)  // Updated to match new surface
+val FdDarkText        = Color(0xFFEAE6DF)  // Updated from #EEEEEF8 (spec: #EAE6DF)
+val FdDarkTextSub     = Color(0xFF9A9893)  // Updated for better contrast
+val FdDarkBorder      = Color(0xFF302D25)  // Updated from #2A2A36 (spec: #302D25)
+val FdDarkPrimary     = Color(0xFF7B8AFF)  // Updated for better visibility
 
 // Legacy aliases kept for old code that references them
 val Accent500 = FdPrimary

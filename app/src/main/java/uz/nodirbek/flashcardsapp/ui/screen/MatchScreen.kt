@@ -34,7 +34,7 @@ fun MatchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val cards = remember(uiState.cards, deckId) {
-        uiState.cards.filter { it.deckId == deckId }.shuffled().take(6)
+        uiState.cards.filter { it.deckId == deckId }.shuffled().take(10)
     }
 
     if (cards.isEmpty()) {
@@ -132,11 +132,11 @@ fun MatchScreen(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 tiles.chunked(2).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         row.forEach { tile ->
                             val isMatched = tile.id in matched
                             val isSelected = selectedId == tile.id && selectedFront == tile.isFront
@@ -158,10 +158,10 @@ fun MatchScreen(
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .height(56.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(bgColor)
-                                    .border(2.5.dp, borderColor, RoundedCornerShape(14.dp))
+                                    .border(2.dp, borderColor, RoundedCornerShape(10.dp))
                                     .then(
                                         if (!isMatched) Modifier.clickable {
                                             if (isSelected) return@clickable
@@ -186,22 +186,22 @@ fun MatchScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (isMatched) {
-                                    Text("✓", fontSize = 20.sp, color = FdGreen)
+                                    Text("✓", fontSize = 16.sp, color = FdGreen)
                                 } else {
                                     Text(
                                         tile.text,
                                         fontFamily = OutfitFamily,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
+                                        fontSize = 11.sp,
                                         color = if (isSelected) FdPrimary else FdText,
                                         textAlign = TextAlign.Center,
-                                        maxLines = 3,
-                                        modifier = Modifier.padding(10.dp)
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                                     )
                                 }
                             }
                         }
-                        // Fill empty slot if odd number of tiles in last row
                         if (row.size == 1) {
                             Spacer(Modifier.weight(1f))
                         }

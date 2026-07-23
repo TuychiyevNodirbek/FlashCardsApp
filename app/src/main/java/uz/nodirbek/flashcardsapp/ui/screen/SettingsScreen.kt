@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat
 import uz.nodirbek.flashcardsapp.notification.NotificationScheduler
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
+import uz.nodirbek.flashcardsapp.ui.components.SimpleAppBar
 
 @Composable
 fun SettingsScreen(
@@ -53,22 +54,17 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(containerColor = FdBackground) { padding ->
+    Scaffold(
+        containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) FdDarkBackground else FdBackground,
+        topBar = {
+            SimpleAppBar(
+                title = "Настройки",
+                onBackClick = onBackClick,
+                showDivider = true
+            )
+        }
+    ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(bottom = 32.dp)) {
-            // Header
-            item {
-                Surface(color = FdSurface, shadowElevation = 0.dp) {
-                    Column {
-                        Row(
-                            Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Настройки", fontFamily = OutfitFamily, fontWeight = FontWeight.Black, fontSize = 22.sp, color = FdText)
-                        }
-                        Divider(color = FdBorder, thickness = 1.5.dp)
-                    }
-                }
-            }
 
             item { Spacer(Modifier.height(16.dp)) }
 
