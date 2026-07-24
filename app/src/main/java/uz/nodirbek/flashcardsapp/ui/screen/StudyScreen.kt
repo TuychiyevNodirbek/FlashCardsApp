@@ -2,6 +2,7 @@ package uz.nodirbek.flashcardsapp.ui.screen
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -202,11 +203,40 @@ private fun SrsSessionContent(
                 .padding(20.dp)
                 .onSizeChanged { screenWidth = it.width.toFloat() }
         ) {
-            // Swipe indicators
-            val threshold = screenWidth * 0.4f
+            val threshold = screenWidth * 0.35f
             val rightOpacity = if (offsetX.value > 0) (offsetX.value / threshold).coerceIn(0f, 1f) else 0f
-            val leftOpacity = if (offsetX.value < 0) (kotlin.math.abs(offsetX.value) / threshold).coerceIn(0f, 1f) else 0f
+            val leftOpacity  = if (offsetX.value < 0) (kotlin.math.abs(offsetX.value) / threshold).coerceIn(0f, 1f) else 0f
 
+            // ── Peek cards (stack behind) ─────────────────────────────────
+            for (peek in 2 downTo 1) {
+                val peekIndex = currentIndex + peek
+                if (peekIndex < cards.size) {
+                    val peekScale = 1f - peek * 0.06f
+                    val peekOffsetY = (peek * 16).dp
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .offset(y = peekOffsetY)
+                            .graphicsLayer { scaleX = peekScale; scaleY = peekScale }
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            cards[peekIndex].front,
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                            modifier = Modifier.padding(24.dp)
+                        )
+                    }
+                }
+            }
+
+            // ── Swipe hint overlays ───────────────────────────────────────
             if (rightOpacity > 0) {
                 Box(
                     Modifier
@@ -220,13 +250,7 @@ private fun SrsSessionContent(
                         Modifier.padding(start = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            "ПОМНЮ",
-                            fontFamily = OutfitFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 16.sp,
-                            color = FdGreen.copy(alpha = rightOpacity)
-                        )
+                        Text("ПОМНЮ", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = FdGreen.copy(alpha = rightOpacity))
                         Text("✓", fontSize = 32.sp, color = FdGreen.copy(alpha = rightOpacity))
                     }
                 }
@@ -244,23 +268,22 @@ private fun SrsSessionContent(
                         Modifier.padding(end = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            "ЗАБЫЛ",
-                            fontFamily = OutfitFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 16.sp,
-                            color = FdRed.copy(alpha = leftOpacity)
-                        )
+                        Text("ЗАБЫЛ", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = FdRed.copy(alpha = leftOpacity))
                         Text("✕", fontSize = 32.sp, color = FdRed.copy(alpha = leftOpacity))
                     }
                 }
             }
 
+            // ── Top draggable card ────────────────────────────────────────
             Box(
                 Modifier
                     .fillMaxSize()
+                    .clip(RoundedCornerShape(20.dp))
+                    .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                     .graphicsLayer {
                         rotationY = rotation
+                        // tilt only on front side while dragging
+                        rotationZ = if (rotation <= 90f) offsetX.value * 0.05f else 0f
                         cameraDistance = 12f * density
                     }
                     .pointerInput(isFlipped) {
@@ -268,40 +291,41 @@ private fun SrsSessionContent(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 if (!isFlipped) {
-                                    scope.launch {
-                                        offsetX.snapTo(offsetX.value + dragAmount.x)
-                                    }
+                                    scope.launch { offsetX.snapTo(offsetX.value + dragAmount.x) }
                                 }
                             },
                             onDragEnd = {
                                 if (!isFlipped) {
+                                    val capturedCard = card
                                     scope.launch {
                                         when {
                                             offsetX.value > threshold -> {
-                                                onRateCard(card.id, 3)
-                                                offsetX.snapTo(0f)
+                                                offsetX.animateTo(screenWidth * 1.6f, tween(280))
+                                                correctCount++
+                                                onRateCard(capturedCard.id, 3)
                                                 currentIndex++
+                                                isFlipped = false
+                                                offsetX.snapTo(0f)
                                             }
                                             offsetX.value < -threshold -> {
-                                                onRateCard(card.id, 0)
+                                                offsetX.animateTo(-screenWidth * 1.6f, tween(280))
+                                                onRateCard(capturedCard.id, 0)
                                                 if (cards.size > 1) {
                                                     cards.removeAt(currentIndex)
-                                                    cards.add(card)
+                                                    cards.add(capturedCard)
                                                 } else {
                                                     currentIndex++
                                                 }
+                                                isFlipped = false
                                                 offsetX.snapTo(0f)
                                             }
-                                            else -> {
-                                                offsetX.animateTo(0f)
-                                            }
+                                            else -> offsetX.animateTo(0f, spring(stiffness = 300f))
                                         }
                                     }
                                 }
                             }
                         )
                     }
-                    .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                     .clickable(enabled = !isFlipped) {
                         if (isDoubleTapped) {
                             isFlipped = !isFlipped
@@ -312,7 +336,7 @@ private fun SrsSessionContent(
                     }
             ) {
                 if (rotation <= 90f) {
-                    // Front
+                    // Front face
                     Box(
                         Modifier
                             .fillMaxSize()
@@ -356,15 +380,11 @@ private fun SrsSessionContent(
                                 Text("🔊", fontSize = 16.sp)
                             }
                             Spacer(Modifier.height(12.dp))
-                            Text(
-                                "Нажмите для переворота",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Нажмите для переворота", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else {
-                    // Back
+                    // Back face
                     Box(
                         Modifier
                             .fillMaxSize()
@@ -380,13 +400,7 @@ private fun SrsSessionContent(
                                     .background(Color.White.copy(alpha = 0.12f))
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                Text(
-                                    "Ответ",
-                                    fontSize = 11.sp,
-                                    fontFamily = OutfitFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
+                                Text("Ответ", fontSize = 11.sp, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                             }
                             Spacer(Modifier.height(20.dp))
                             Text(

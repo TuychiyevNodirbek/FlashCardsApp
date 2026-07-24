@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import uz.nodirbek.flashcardsapp.notification.NotificationScheduler
-import uz.nodirbek.flashcardsapp.ui.components.SimpleAppBar
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
@@ -66,9 +66,9 @@ fun SettingsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            SimpleAppBar(
+            UnifiedAppBar(
                 title = "Настройки",
-                onBackClick = onBackClick,
+                showBackButton = false,
                 showDivider = true
             )
         }

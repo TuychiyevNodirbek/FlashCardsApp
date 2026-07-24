@@ -26,6 +26,65 @@ import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 private data class MatchTile(val id: String, val text: String, val isFront: Boolean)
 
 @Composable
+private fun MatchTileBox(
+    tile: MatchTile,
+    matched: Set<String>,
+    selectedId: String?,
+    selectedFront: Boolean?,
+    wrongIds: Set<String>,
+    onClick: (Boolean) -> Unit
+) {
+    val isMatched = tile.id in matched
+    val isSelected = selectedId == tile.id && selectedFront == tile.isFront
+    val isWrong = tile.id in wrongIds && isSelected
+
+    val bgColor = when {
+        isMatched -> FdGreenLight
+        isWrong -> FdRedLight
+        isSelected -> FdPrimaryLight
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val borderColor = when {
+        isMatched -> FdGreen
+        isWrong -> FdRed
+        isSelected -> FdPrimary
+        else -> MaterialTheme.colorScheme.outline
+    }
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(bgColor)
+            .border(2.dp, borderColor, RoundedCornerShape(10.dp))
+            .then(
+                if (!isMatched) Modifier.clickable {
+                    if (isSelected) return@clickable
+                    onClick(false)
+                } else Modifier
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isMatched) {
+            Text("✓", fontSize = 16.sp, color = FdGreen)
+        } else {
+            Text(
+                tile.text,
+                fontFamily = OutfitFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = if (isSelected) FdPrimary else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun MatchScreen(
     deckId: String,
     viewModel: HomeViewModel,
@@ -56,7 +115,7 @@ fun MatchScreen(
     val tiles = remember(cards) {
         val fronts = cards.map { MatchTile(it.id, it.front, isFront = true) }
         val backs = cards.map { MatchTile(it.id, it.back, isFront = false) }
-        (fronts + backs).shuffled()
+        fronts + backs.shuffled()
     }
 
     var selectedId by remember { mutableStateOf<String?>(null) }
@@ -94,9 +153,9 @@ fun MatchScreen(
         }
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            // Top bar
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
             Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
                 Column {
                     Row(
@@ -126,84 +185,81 @@ fun MatchScreen(
                     )
                 }
             }
+        }
+    ) { padding ->
+        val fronts = remember(tiles) { tiles.filter { it.isFront } }
+        val backs = remember(tiles) { tiles.filter { !it.isFront }.shuffled() }
 
-            // Tile grid (2 columns) built with Row/Column to avoid LazyVerticalGrid API issues
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Left column: words (fronts)
             Column(
                 Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                tiles.chunked(2).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        row.forEach { tile ->
-                            val isMatched = tile.id in matched
-                            val isSelected = selectedId == tile.id && selectedFront == tile.isFront
-                            val isWrong = tile.id in wrongIds && isSelected
-
-                            val bgColor = when {
-                                isMatched -> FdGreenLight
-                                isWrong -> FdRedLight
-                                isSelected -> FdPrimaryLight
-                                else -> MaterialTheme.colorScheme.surface
-                            }
-                            val borderColor = when {
-                                isMatched -> FdGreen
-                                isWrong -> FdRed
-                                isSelected -> FdPrimary
-                                else -> MaterialTheme.colorScheme.outline
-                            }
-
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .height(56.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(bgColor)
-                                    .border(2.dp, borderColor, RoundedCornerShape(10.dp))
-                                    .then(
-                                        if (!isMatched) Modifier.clickable {
-                                            if (isSelected) return@clickable
-                                            val prevId = selectedId
-                                            val prevFront = selectedFront
-                                            if (prevId == null) {
-                                                selectedId = tile.id
-                                                selectedFront = tile.isFront
-                                            } else {
-                                                if (prevId == tile.id && prevFront != tile.isFront) {
-                                                    matched = matched + tile.id
-                                                    selectedId = null
-                                                    selectedFront = null
-                                                } else {
-                                                    wrongIds = setOf(prevId, tile.id)
-                                                    selectedId = tile.id
-                                                    selectedFront = tile.isFront
-                                                }
-                                            }
-                                        } else Modifier
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isMatched) {
-                                    Text("✓", fontSize = 16.sp, color = FdGreen)
+                fronts.forEach { tile ->
+                    MatchTileBox(tile, matched, selectedId, selectedFront, wrongIds) { selected ->
+                        if (selected) {
+                            selectedId = tile.id
+                            selectedFront = tile.isFront
+                        } else {
+                            val prevId = selectedId
+                            val prevFront = selectedFront
+                            if (prevId == null) {
+                                selectedId = tile.id
+                                selectedFront = tile.isFront
+                            } else {
+                                if (prevId == tile.id && prevFront != tile.isFront) {
+                                    matched = matched + tile.id
+                                    selectedId = null
+                                    selectedFront = null
                                 } else {
-                                    Text(
-                                        tile.text,
-                                        fontFamily = OutfitFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
-                                        color = if (isSelected) FdPrimary else MaterialTheme.colorScheme.onSurface,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-                                    )
+                                    wrongIds = setOf(prevId, tile.id)
+                                    selectedId = tile.id
+                                    selectedFront = tile.isFront
                                 }
                             }
                         }
-                        if (row.size == 1) {
-                            Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+
+            // Right column: translations (backs)
+            Column(
+                Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                backs.forEach { tile ->
+                    MatchTileBox(tile, matched, selectedId, selectedFront, wrongIds) { selected ->
+                        if (selected) {
+                            selectedId = tile.id
+                            selectedFront = tile.isFront
+                        } else {
+                            val prevId = selectedId
+                            val prevFront = selectedFront
+                            if (prevId == null) {
+                                selectedId = tile.id
+                                selectedFront = tile.isFront
+                            } else {
+                                if (prevId == tile.id && prevFront != tile.isFront) {
+                                    matched = matched + tile.id
+                                    selectedId = null
+                                    selectedFront = null
+                                } else {
+                                    wrongIds = setOf(prevId, tile.id)
+                                    selectedId = tile.id
+                                    selectedFront = tile.isFront
+                                }
+                            }
                         }
                     }
                 }

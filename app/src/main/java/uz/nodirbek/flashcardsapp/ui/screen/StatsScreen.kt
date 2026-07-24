@@ -49,26 +49,26 @@ fun StatsScreen(viewModel: HomeViewModel) {
     val learnedCount = uiState.cards.count { it.reps > 0 && it.interval >= 7 }
     val inProgressCount = uiState.cards.count { it.reps > 0 && it.interval < 7 }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Surface(color = MaterialTheme.colorScheme.surface) {
+                Column {
+                    Row(
+                        Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Статистика", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
+                }
+            }
+        }
+    ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            // Header
-            item {
-                Surface(color = MaterialTheme.colorScheme.surface) {
-                    Column {
-                        Row(
-                            Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Статистика", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                        Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
-                    }
-                }
-            }
-
             // Hero tiles: streak + record
             item {
                 Spacer(Modifier.height(16.dp))

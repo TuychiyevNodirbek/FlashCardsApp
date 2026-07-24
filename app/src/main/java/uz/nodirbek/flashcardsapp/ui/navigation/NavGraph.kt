@@ -1,9 +1,13 @@
 package uz.nodirbek.flashcardsapp.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,15 +31,15 @@ fun NavGraph(
     // State for test results
     var testResults by remember { mutableStateOf<List<TestResult>>(emptyList()) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
-        bottomBar = {
-            if (showBottomBar) BottomNavBar(navController = navController)
-        }
+        containerColor = Color.Transparent,
+        bottomBar = {}
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
         ) {
 
             // ── Bottom-nav roots ─────────────────────────────────────────
@@ -288,4 +292,12 @@ fun NavGraph(
             }
         }
     }
+
+    if (showBottomBar) {
+        BottomNavBar(
+            navController = navController,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+    } // end Box
 }

@@ -48,7 +48,7 @@ fun TestScreen(
         return
     }
 
-    var currentIndex by remember { mutableStateOf(0) }
+    var currentIndex by remember { mutableIntStateOf(0) }
     val results = remember { mutableStateListOf<TestResult>() }
 
     if (currentIndex >= questions.size) {
