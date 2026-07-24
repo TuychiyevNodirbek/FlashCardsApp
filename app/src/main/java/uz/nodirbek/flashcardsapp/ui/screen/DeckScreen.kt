@@ -42,7 +42,8 @@ fun DeckScreen(
     onNavigateToFlashcards: (String) -> Unit,
     onNavigateToTestSetup: (String) -> Unit,
     onNavigateToMatch: (String) -> Unit,
-    onNavigateToForgetting: (String) -> Unit
+    onNavigateToForgetting: (String) -> Unit,
+    onNavigateToUnits: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val deckWithStats = remember(uiState.decks, deckId) {
@@ -163,6 +164,12 @@ fun DeckScreen(
                         color = FdPurple, shadowColor = FdPurpleDark,
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigateToMatch(deckId) }
+                    )
+                    StudyModeBtn(
+                        label = "Юниты", emoji = "📚",
+                        color = FdOrange, shadowColor = FdOrangeDark,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToUnits(deckId) }
                     )
                 }
             }

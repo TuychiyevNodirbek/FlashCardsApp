@@ -46,6 +46,18 @@ sealed class Screen(val route: String) {
         const val ARG = "deckId"
     }
 
+    // ── Unit Flow ─────────────────────────────────────────────────────
+    object UnitList : Screen("units/{deckId}") {
+        fun createRoute(deckId: String) = "units/$deckId"
+        const val ARG = "deckId"
+    }
+    object UnitFlow : Screen("unit-flow/{deckId}/{unitIndex}") {
+        fun createRoute(deckId: String, unitIndex: Int) = "unit-flow/$deckId/$unitIndex"
+        const val ARG_DECK = "deckId"
+        const val ARG_UNIT = "unitIndex"
+    }
+    object UnitResult : Screen("unit-result")
+
     // ── Misc ──────────────────────────────────────────────────────────
     object Import : Screen("import")
 

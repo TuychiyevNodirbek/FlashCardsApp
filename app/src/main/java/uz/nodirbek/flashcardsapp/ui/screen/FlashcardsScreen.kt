@@ -46,23 +46,40 @@ fun FlashcardsScreen(
     viewModel: HomeViewModel,
     onBackClick: () -> Unit
 ) {
-    val isDarkTheme = LocalIsDarkTheme.current
     val uiState by viewModel.uiState.collectAsState()
+    val cards = remember(uiState.cards, deckId) { uiState.cards.filter { it.deckId == deckId } }
+    FlashcardsContent(
+        cards = cards,
+        ttsLang = uiState.ttsLang,
+        ttsSpeed = uiState.ttsSpeed,
+        onDone = onBackClick,
+        onBackClick = onBackClick
+    )
+}
+
+@Composable
+fun FlashcardsContent(
+    cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
+    ttsLang: String = "en",
+    ttsSpeed: Float = 1f,
+    onDone: () -> Unit,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDarkTheme = LocalIsDarkTheme.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val ttsManager = remember { uz.nodirbek.flashcardsapp.tts.TtsManager(context) }
     DisposableEffect(Unit) { onDispose { ttsManager.shutdown() } }
-    val cards = remember(uiState.cards, deckId) { uiState.cards.filter { it.deckId == deckId } }
 
     var displayCards by remember { mutableStateOf(cards.shuffled()) }
     val pagerState = rememberPagerState { displayCards.size }
     val coroutineScope = rememberCoroutineScope()
-    var showCompletionDialog by remember { mutableStateOf(false) }
     val flippedPages = remember { mutableStateMapOf<Int, Boolean>() }
 
     val currentPage = pagerState.currentPage
 
     if (cards.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+        Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("📋", fontSize = 48.sp)
                 Spacer(Modifier.height(12.dp))
@@ -80,6 +97,7 @@ fun FlashcardsScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
@@ -191,13 +209,14 @@ fun FlashcardsScreen(
                                     Modifier
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(FdPrimaryLight)
-                                        .clickable { ttsManager.speak(card.front, uiState.ttsLang, uiState.ttsSpeed) }
+                                        .clickable { ttsManager.speak(card.front, ttsLang, ttsSpeed) }
                                         .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Text("🔊", fontSize = 16.sp)
                                 }
                                 Spacer(Modifier.height(12.dp))
                                 Text("Нажмите для переворота", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
                             }
                         }
                     } else {
@@ -248,7 +267,7 @@ fun FlashcardsScreen(
                         if (currentPage < displayCards.size - 1) {
                             coroutineScope.launch { pagerState.animateScrollToPage(currentPage + 1) }
                         } else {
-                            showCompletionDialog = true
+                            onDone()
                         }
                     },
                     modifier = Modifier.weight(1f).height(52.dp),
@@ -265,44 +284,4 @@ fun FlashcardsScreen(
         }
     }
 
-    if (showCompletionDialog) {
-        AlertDialog(
-            onDismissRequest = { showCompletionDialog = false },
-            title = { Text("Карточки пройдены", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
-            text = { Text("Хотите начать заново или вернуться?", fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-            confirmButton = {
-                PressButton(
-                    onClick = {
-                        displayCards = cards.shuffled()
-                        coroutineScope.launch { pagerState.scrollToPage(0) }
-                        flippedPages.clear()
-                        showCompletionDialog = false
-                    },
-                    modifier = Modifier.height(44.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    shadowColor = if (isDarkTheme) Color(0xFF2F3D7A) else FdPrimaryDark,
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Заново", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
-                }
-            },
-            dismissButton = {
-                PressButton(
-                    onClick = {
-                        onBackClick()
-                        showCompletionDialog = false
-                    },
-                    modifier = Modifier.height(44.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowColor = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Завершить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            textContentColor = MaterialTheme.colorScheme.onSurface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface
-        )
-    }
 }
