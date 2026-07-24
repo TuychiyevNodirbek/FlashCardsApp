@@ -19,9 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import uz.nodirbek.flashcardsapp.data.repository.CardRepository
+import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
 import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.screen.exercise.AudioContent
+import uz.nodirbek.flashcardsapp.ui.screen.exercise.ScrambleContent
 import uz.nodirbek.flashcardsapp.ui.screen.exercise.WriteContent
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.FlowStep
@@ -32,13 +36,16 @@ fun UnitFlowScreen(
     deckId: String,
     unitIndex: Int,
     unitRepository: UnitRepository,
+    cardRepository: CardRepository,
+    statsRepository: StatsRepository,
+    rateCardUseCase: RateCardUseCase,
     ttsLang: String = "en",
     ttsSpeed: Float = 1f,
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit
 ) {
     val factory = remember(deckId, unitIndex) {
-        UnitFlowViewModel.Factory(unitRepository, deckId, unitIndex)
+        UnitFlowViewModel.Factory(unitRepository, cardRepository, statsRepository, rateCardUseCase, deckId, unitIndex)
     }
     val vm: UnitFlowViewModel = viewModel(
         key = "unit_flow_${deckId}_$unitIndex",
@@ -130,6 +137,11 @@ fun UnitFlowScreen(
                     cards = shuffledCards,
                     ttsLang = ttsLang,
                     ttsSpeed = ttsSpeed,
+                    onBackClick = { showExitDialog = true },
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                )
+                FlowStep.SCRAMBLE -> ScrambleContent(
+                    cards = shuffledCards,
                     onBackClick = { showExitDialog = true },
                     onDone = { correct, total -> vm.onStepFinished(correct, total) }
                 )

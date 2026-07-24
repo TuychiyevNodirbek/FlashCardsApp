@@ -86,7 +86,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    NavGraph(navController = navController, homeViewModel = homeViewModel, unitRepository = unitRepository)
+                    NavGraph(
+                        navController = navController,
+                        homeViewModel = homeViewModel,
+                        unitRepository = unitRepository,
+                        cardRepository = cardRepository,
+                        statsRepository = statsRepository,
+                        rateCardUseCase = rateCardUseCase
+                    )
                 }
             }
         }

@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import uz.nodirbek.flashcardsapp.data.repository.CardRepository
+import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
 import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
 import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 
-enum class FlowStep { FLASHCARDS, MATCH, TEST, AUDIO, WRITE }
+enum class FlowStep { FLASHCARDS, MATCH, TEST, AUDIO, SCRAMBLE, WRITE }
 
 data class UnitFlowUiState(
     val cards: List<Card> = emptyList(),
@@ -22,6 +25,7 @@ data class UnitFlowUiState(
         FlowStep.MATCH,
         FlowStep.TEST,
         FlowStep.AUDIO,
+        FlowStep.SCRAMBLE,
         FlowStep.WRITE
     ),
     val correctAnswers: Int = 0,
@@ -38,6 +42,9 @@ data class UnitFlowUiState(
 
 class UnitFlowViewModel(
     private val unitRepository: UnitRepository,
+    private val cardRepository: CardRepository,
+    private val statsRepository: StatsRepository,
+    private val rateCardUseCase: RateCardUseCase,
     private val deckId: String,
     private val unitIndex: Int
 ) : ViewModel() {
@@ -74,6 +81,16 @@ class UnitFlowViewModel(
                     completed = true,
                     accuracy = accuracy
                 )
+                // Записать статистику дня
+                val today = RateCardUseCase.getTodayDate()
+                if (newTotal > 0) {
+                    statsRepository.recordReview(date = today, reviews = newTotal, correct = newCorrect)
+                }
+                // Инициализировать SM-2 для новых карточек юнита (reps == 0)
+                state.cards.filter { it.reps == 0 }.forEach { card ->
+                    val rated = rateCardUseCase(card, quality = 2, todayDate = today)
+                    cardRepository.updateCard(rated)
+                }
                 _uiState.update { it.copy(correctAnswers = newCorrect, totalAnswers = newTotal, finished = true) }
             } else {
                 unitRepository.saveProgress(
@@ -90,11 +107,14 @@ class UnitFlowViewModel(
 
     class Factory(
         private val unitRepository: UnitRepository,
+        private val cardRepository: CardRepository,
+        private val statsRepository: StatsRepository,
+        private val rateCardUseCase: RateCardUseCase,
         private val deckId: String,
         private val unitIndex: Int
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            UnitFlowViewModel(unitRepository, deckId, unitIndex) as T
+            UnitFlowViewModel(unitRepository, cardRepository, statsRepository, rateCardUseCase, deckId, unitIndex) as T
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -153,13 +154,38 @@ private fun UnitCard(unit: StudyUnit, onStart: () -> Unit) {
             }
 
             if (!isLocked && !isDone) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
+                // Мини-прогресс шагов
+                if (unit.completedSteps > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { unit.completedSteps.toFloat() / 6f },
+                            modifier = Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)),
+                            color = FdPrimary,
+                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "шаг ${unit.completedSteps}/6",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
                 PressButton(
                     onClick = onStart,
                     modifier = Modifier.fillMaxWidth().height(44.dp),
                     color = FdPrimary, shadowColor = FdPrimaryDark, shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Начать", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                    Text(
+                        if (unit.completedSteps > 0) "Продолжить" else "Начать",
+                        fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White
+                    )
                 }
             }
 

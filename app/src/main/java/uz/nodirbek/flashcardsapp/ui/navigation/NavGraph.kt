@@ -14,7 +14,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import uz.nodirbek.flashcardsapp.data.repository.CardRepository
+import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
 import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.screen.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
@@ -22,7 +25,10 @@ import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 fun NavGraph(
     navController: NavHostController,
     homeViewModel: HomeViewModel,
-    unitRepository: UnitRepository
+    unitRepository: UnitRepository,
+    cardRepository: CardRepository,
+    statsRepository: StatsRepository,
+    rateCardUseCase: RateCardUseCase
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -319,6 +325,9 @@ fun NavGraph(
                     deckId = deckId,
                     unitIndex = idx,
                     unitRepository = unitRepository,
+                    cardRepository = cardRepository,
+                    statsRepository = statsRepository,
+                    rateCardUseCase = rateCardUseCase,
                     ttsLang = ttsState.ttsLang,
                     ttsSpeed = ttsState.ttsSpeed,
                     onBack = { navController.popBackStack() },
