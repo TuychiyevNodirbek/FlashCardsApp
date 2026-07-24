@@ -20,6 +20,7 @@ import uz.nodirbek.flashcardsapp.data.local.preferences.PreferencesDataStore
 import uz.nodirbek.flashcardsapp.data.repository.CardRepository
 import uz.nodirbek.flashcardsapp.data.repository.DeckRepository
 import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
+import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.notification.NotificationScheduler
 import uz.nodirbek.flashcardsapp.ui.navigation.NavGraph
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
         val cardRepository = CardRepository(database.cardDao())
         val deckRepository = DeckRepository(database.deckDao())
         val statsRepository = StatsRepository(database.dailyStatsDao())
+        val unitRepository = UnitRepository(database.cardDao(), database.unitProgressDao())
         val preferencesDataStore = PreferencesDataStore(this)
         val rateCardUseCase = RateCardUseCase()
         notificationScheduler = NotificationScheduler(this)
@@ -84,7 +86,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    NavGraph(navController = navController, homeViewModel = homeViewModel)
+                    NavGraph(navController = navController, homeViewModel = homeViewModel, unitRepository = unitRepository)
                 }
             }
         }

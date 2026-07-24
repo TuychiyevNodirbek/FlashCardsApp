@@ -8,18 +8,34 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [CardEntity::class, DeckEntity::class, DailyStatsEntity::class],
-    version = 2,
+    entities = [CardEntity::class, DeckEntity::class, DailyStatsEntity::class, UnitProgressEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class FlashCardsDatabase : RoomDatabase() {
     abstract fun cardDao(): CardDao
     abstract fun deckDao(): DeckDao
     abstract fun dailyStatsDao(): DailyStatsDao
+    abstract fun unitProgressDao(): UnitProgressDao
 
     companion object {
         @Volatile
         private var INSTANCE: FlashCardsDatabase? = null
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS unit_progress (
+                        deckId TEXT NOT NULL,
+                        unitIndex INTEGER NOT NULL,
+                        completedSteps INTEGER NOT NULL DEFAULT 0,
+                        completed INTEGER NOT NULL DEFAULT 0,
+                        bestAccuracy REAL NOT NULL DEFAULT 0,
+                        PRIMARY KEY (deckId, unitIndex)
+                    )
+                """)
+            }
+        }
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -61,7 +77,7 @@ abstract class FlashCardsDatabase : RoomDatabase() {
                     FlashCardsDatabase::class.java,
                     "flashcards_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

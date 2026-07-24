@@ -95,9 +95,19 @@ fun MatchScreen(
     val cards = remember(uiState.cards, deckId) {
         uiState.cards.filter { it.deckId == deckId }.shuffled().take(10)
     }
+    MatchContent(cards = cards, onBackClick = onBackClick, onFinished = onFinished)
+}
+
+@Composable
+fun MatchContent(
+    cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
+    onBackClick: () -> Unit,
+    onFinished: (seconds: Int, isNewRecord: Boolean, bestSeconds: Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
 
     if (cards.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+        Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🎯", fontSize = 48.sp)
                 Spacer(Modifier.height(12.dp))

@@ -14,13 +14,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
 import uz.nodirbek.flashcardsapp.ui.screen.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    homeViewModel: HomeViewModel
+    homeViewModel: HomeViewModel,
+    unitRepository: UnitRepository
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -30,6 +32,12 @@ fun NavGraph(
     var matchTimeSeconds by remember { mutableStateOf(0) }
     // State for test results
     var testResults by remember { mutableStateOf<List<TestResult>>(emptyList()) }
+    // State for unit result
+    var unitResultCorrect by remember { mutableStateOf(0) }
+    var unitResultTotal by remember { mutableStateOf(0) }
+    var unitResultIndex by remember { mutableStateOf(0) }
+    var unitResultDeckId by remember { mutableStateOf("") }
+    var unitResultHasNext by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
@@ -101,7 +109,8 @@ fun NavGraph(
                     onNavigateToFlashcards = { id -> navController.navigate(Screen.Flashcards.createRoute(id)) },
                     onNavigateToTestSetup = { id -> navController.navigate(Screen.TestSetup.createRoute(id)) },
                     onNavigateToMatch = { id -> navController.navigate(Screen.Match.createRoute(id)) },
-                    onNavigateToForgetting = { id -> navController.navigate(Screen.ForgettingEdge.createRoute(id)) }
+                    onNavigateToForgetting = { id -> navController.navigate(Screen.ForgettingEdge.createRoute(id)) },
+                    onNavigateToUnits = { id -> navController.navigate(Screen.UnitList.createRoute(id)) }
                 )
             }
 
@@ -270,6 +279,82 @@ fun NavGraph(
                     viewModel = homeViewModel,
                     onBackClick = { navController.popBackStack() },
                     onStartReview = { id -> navController.navigate(Screen.SrsReview.createRoute(id)) }
+                )
+            }
+
+            // ── Unit List ────────────────────────────────────────────────
+            composable(
+                route = Screen.UnitList.route,
+                arguments = listOf(navArgument(Screen.UnitList.ARG) { type = NavType.StringType }),
+                enterTransition = { StudyTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { StudyTransitions.popExit() }
+            ) { backStackEntry ->
+                val deckId = backStackEntry.arguments?.getString(Screen.UnitList.ARG) ?: return@composable
+                UnitListScreen(
+                    deckId = deckId,
+                    unitRepository = unitRepository,
+                    onBack = { navController.popBackStack() },
+                    onOpenUnit = { idx -> navController.navigate(Screen.UnitFlow.createRoute(deckId, idx)) }
+                )
+            }
+
+            // ── Unit Flow ────────────────────────────────────────────────
+            composable(
+                route = Screen.UnitFlow.route,
+                arguments = listOf(
+                    navArgument(Screen.UnitFlow.ARG_DECK) { type = NavType.StringType },
+                    navArgument(Screen.UnitFlow.ARG_UNIT) { type = NavType.IntType }
+                ),
+                enterTransition = { StudyTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { StudyTransitions.popExit() }
+            ) { backStackEntry ->
+                val deckId = backStackEntry.arguments?.getString(Screen.UnitFlow.ARG_DECK) ?: return@composable
+                val idx = backStackEntry.arguments?.getInt(Screen.UnitFlow.ARG_UNIT) ?: return@composable
+                UnitFlowScreen(
+                    deckId = deckId,
+                    unitIndex = idx,
+                    unitRepository = unitRepository,
+                    onBack = { navController.popBackStack() },
+                    onFinished = { correct, total ->
+                        unitResultCorrect = correct
+                        unitResultTotal = total
+                        unitResultIndex = idx
+                        unitResultDeckId = deckId
+                        // hasNextUnit is resolved lazily in UnitResultScreen via unitRepository
+                        unitResultHasNext = true
+                        navController.navigate(Screen.UnitResult.route) {
+                            popUpTo(Screen.UnitFlow.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            // ── Unit Result ──────────────────────────────────────────────
+            composable(
+                Screen.UnitResult.route,
+                enterTransition = { ResultsTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { ResultsTransitions.popExit() }
+            ) {
+                UnitResultScreen(
+                    unitIndex = unitResultIndex,
+                    correctAnswers = unitResultCorrect,
+                    totalAnswers = unitResultTotal,
+                    hasNextUnit = unitResultHasNext,
+                    onBackToUnits = {
+                        navController.popBackStack(Screen.UnitList.route, inclusive = false)
+                    },
+                    onNextUnit = {
+                        val nextIdx = unitResultIndex + 1
+                        navController.navigate(Screen.UnitFlow.createRoute(unitResultDeckId, nextIdx)) {
+                            popUpTo(Screen.UnitResult.route) { inclusive = true }
+                        }
+                    }
                 )
             }
 

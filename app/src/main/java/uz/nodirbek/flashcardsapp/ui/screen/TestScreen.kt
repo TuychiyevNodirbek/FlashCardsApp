@@ -36,53 +36,76 @@ fun TestScreen(
     onFinished: (results: List<TestResult>) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val questions = remember(uiState.cards, deckId, count) {
-        uiState.cards.filter { it.deckId == deckId }.shuffled().take(count)
-    }
     val allCards = remember(uiState.cards, deckId) { uiState.cards.filter { it.deckId == deckId } }
+    val questions = remember(uiState.cards, deckId, count) { allCards.shuffled().take(count) }
 
-    if (questions.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+    val results = remember { mutableStateListOf<TestResult>() }
+    TestContent(
+        cards = questions,
+        allCardsForDistractors = allCards,
+        isWritten = isWritten,
+        onBackClick = onBackClick,
+        onDone = { _, _ -> onFinished(results.toList()) },
+        onAnswerRecorded = { card, answer, correct ->
+            results.add(TestResult(card, answer, correct))
+        }
+    )
+}
+
+@Composable
+fun TestContent(
+    cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
+    allCardsForDistractors: List<uz.nodirbek.flashcardsapp.domain.model.Card> = cards,
+    isWritten: Boolean = false,
+    onBackClick: () -> Unit,
+    onDone: (correct: Int, total: Int) -> Unit,
+    onAnswerRecorded: ((card: uz.nodirbek.flashcardsapp.domain.model.Card, answer: String, correct: Boolean) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    if (cards.isEmpty()) {
+        Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             Text("Нет карточек для теста", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
         }
         return
     }
 
     var currentIndex by remember { mutableIntStateOf(0) }
-    val results = remember { mutableStateListOf<TestResult>() }
+    var correctCount by remember { mutableIntStateOf(0) }
 
-    if (currentIndex >= questions.size) {
-        onFinished(results.toList())
+    if (currentIndex >= cards.size) {
+        onDone(correctCount, cards.size)
         return
     }
 
-    val card = questions[currentIndex]
+    val card = cards[currentIndex]
 
     if (isWritten) {
         WrittenQuestion(
             card = card,
             index = currentIndex,
-            total = questions.size,
+            total = cards.size,
             onAnswer = { answer ->
                 val correct = answer.trim().equals(card.back.trim(), ignoreCase = true)
-                results.add(TestResult(card, answer, correct))
+                if (correct) correctCount++
+                onAnswerRecorded?.invoke(card, answer, correct)
                 currentIndex++
             },
             onBack = onBackClick
         )
     } else {
-        val options = remember(card, allCards) {
-            val distractors = allCards.filter { it.id != card.id }.map { it.back }.shuffled().take(3)
+        val options = remember(card, allCardsForDistractors) {
+            val distractors = allCardsForDistractors.filter { it.id != card.id }.map { it.back }.shuffled().take(3)
             (distractors + card.back).shuffled()
         }
         MultiChoiceQuestion(
             card = card,
             options = options,
             index = currentIndex,
-            total = questions.size,
+            total = cards.size,
             onAnswer = { answer ->
                 val correct = answer == card.back
-                results.add(TestResult(card, answer, correct))
+                if (correct) correctCount++
+                onAnswerRecorded?.invoke(card, answer, correct)
                 currentIndex++
             },
             onBack = onBackClick
