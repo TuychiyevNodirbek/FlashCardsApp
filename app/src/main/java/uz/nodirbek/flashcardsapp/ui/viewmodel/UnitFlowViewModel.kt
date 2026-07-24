@@ -12,16 +12,24 @@ import kotlinx.coroutines.launch
 import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
 import uz.nodirbek.flashcardsapp.domain.model.Card
 
-enum class FlowStep { FLASHCARDS, MATCH, TEST }
+enum class FlowStep { FLASHCARDS, MATCH, TEST, AUDIO, WRITE }
 
 data class UnitFlowUiState(
     val cards: List<Card> = emptyList(),
     val stepIndex: Int = 0,
-    val steps: List<FlowStep> = listOf(FlowStep.FLASHCARDS, FlowStep.MATCH, FlowStep.TEST),
+    val steps: List<FlowStep> = listOf(
+        FlowStep.FLASHCARDS,
+        FlowStep.MATCH,
+        FlowStep.TEST,
+        FlowStep.AUDIO,
+        FlowStep.WRITE
+    ),
     val correctAnswers: Int = 0,
     val totalAnswers: Int = 0,
     val finished: Boolean = false,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val ttsLang: String = "en",
+    val ttsSpeed: Float = 1f
 ) {
     val totalSteps: Int get() = steps.size
     val currentStep: FlowStep? get() = steps.getOrNull(stepIndex)

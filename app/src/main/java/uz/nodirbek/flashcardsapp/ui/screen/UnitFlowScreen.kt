@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
+import uz.nodirbek.flashcardsapp.ui.screen.exercise.AudioContent
+import uz.nodirbek.flashcardsapp.ui.screen.exercise.WriteContent
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.FlowStep
 import uz.nodirbek.flashcardsapp.ui.viewmodel.UnitFlowViewModel
@@ -30,6 +32,8 @@ fun UnitFlowScreen(
     deckId: String,
     unitIndex: Int,
     unitRepository: UnitRepository,
+    ttsLang: String = "en",
+    ttsSpeed: Float = 1f,
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit
 ) {
@@ -119,6 +123,18 @@ fun UnitFlowScreen(
                 FlowStep.TEST -> TestContent(
                     cards = shuffledCards,
                     allCardsForDistractors = uiState.cards,
+                    onBackClick = { showExitDialog = true },
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                )
+                FlowStep.AUDIO -> AudioContent(
+                    cards = shuffledCards,
+                    ttsLang = ttsLang,
+                    ttsSpeed = ttsSpeed,
+                    onBackClick = { showExitDialog = true },
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                )
+                FlowStep.WRITE -> WriteContent(
+                    cards = shuffledCards,
                     onBackClick = { showExitDialog = true },
                     onDone = { correct, total -> vm.onStepFinished(correct, total) }
                 )

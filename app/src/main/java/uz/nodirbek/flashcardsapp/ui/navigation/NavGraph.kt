@@ -314,10 +314,13 @@ fun NavGraph(
             ) { backStackEntry ->
                 val deckId = backStackEntry.arguments?.getString(Screen.UnitFlow.ARG_DECK) ?: return@composable
                 val idx = backStackEntry.arguments?.getInt(Screen.UnitFlow.ARG_UNIT) ?: return@composable
+                val ttsState by homeViewModel.uiState.collectAsState()
                 UnitFlowScreen(
                     deckId = deckId,
                     unitIndex = idx,
                     unitRepository = unitRepository,
+                    ttsLang = ttsState.ttsLang,
+                    ttsSpeed = ttsState.ttsSpeed,
                     onBack = { navController.popBackStack() },
                     onFinished = { correct, total ->
                         unitResultCorrect = correct

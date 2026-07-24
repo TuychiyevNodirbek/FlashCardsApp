@@ -22,6 +22,7 @@ import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.components.ProgressAppBar
+import uz.nodirbek.flashcardsapp.ui.screen.exercise.ErrorQueue
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 data class TestResult(val card: Card, val userAnswer: String, val isCorrect: Boolean)
@@ -69,44 +70,49 @@ fun TestContent(
         return
     }
 
-    var currentIndex by remember { mutableIntStateOf(0) }
+    val errorQueue = remember { ErrorQueue(cards) }
+    var currentCard by remember { mutableStateOf(errorQueue.next()!!) }
+    var answeredCount by remember { mutableIntStateOf(0) }
     var correctCount by remember { mutableIntStateOf(0) }
 
-    if (currentIndex >= cards.size) {
-        onDone(correctCount, cards.size)
-        return
+    fun advance(card: Card, answer: String, isCorrect: Boolean) {
+        if (errorQueue.isFirstAttempt(card.id)) {
+            answeredCount++
+            if (isCorrect) correctCount++ else errorQueue.addError(card)
+        }
+        onAnswerRecorded?.invoke(card, answer, isCorrect)
+        val next = errorQueue.next()
+        if (next == null) {
+            onDone(correctCount, errorQueue.totalPrimary)
+        } else {
+            currentCard = next
+        }
     }
-
-    val card = cards[currentIndex]
 
     if (isWritten) {
         WrittenQuestion(
-            card = card,
-            index = currentIndex,
-            total = cards.size,
+            card = currentCard,
+            index = answeredCount,
+            total = errorQueue.totalPrimary,
             onAnswer = { answer ->
-                val correct = answer.trim().equals(card.back.trim(), ignoreCase = true)
-                if (correct) correctCount++
-                onAnswerRecorded?.invoke(card, answer, correct)
-                currentIndex++
+                val correct = answer.trim().equals(currentCard.back.trim(), ignoreCase = true)
+                advance(currentCard, answer, correct)
             },
             onBack = onBackClick
         )
     } else {
-        val options = remember(card, allCardsForDistractors) {
-            val distractors = allCardsForDistractors.filter { it.id != card.id }.map { it.back }.shuffled().take(3)
-            (distractors + card.back).shuffled()
+        val options = remember(currentCard, allCardsForDistractors) {
+            val distractors = allCardsForDistractors.filter { it.id != currentCard.id }.map { it.back }.shuffled().take(3)
+            (distractors + currentCard.back).shuffled()
         }
         MultiChoiceQuestion(
-            card = card,
+            card = currentCard,
             options = options,
-            index = currentIndex,
-            total = cards.size,
+            index = answeredCount,
+            total = errorQueue.totalPrimary,
             onAnswer = { answer ->
-                val correct = answer == card.back
-                if (correct) correctCount++
-                onAnswerRecorded?.invoke(card, answer, correct)
-                currentIndex++
+                val correct = answer == currentCard.back
+                advance(currentCard, answer, correct)
             },
             onBack = onBackClick
         )
