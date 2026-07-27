@@ -61,10 +61,19 @@ fun StatsScreen(viewModel: HomeViewModel) {
             Surface(color = MaterialTheme.colorScheme.surface) {
                 Column {
                     Row(
-                        Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 16.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Статистика", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "Статистика",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
                 }
@@ -72,24 +81,35 @@ fun StatsScreen(viewModel: HomeViewModel) {
         }
     ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding),
+            Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             // Hero tiles: streak + record
             item {
                 Spacer(Modifier.height(16.dp))
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Серия — filled primary
                     Column(
-                        Modifier.weight(1f)
+                        Modifier
+                            .weight(1f)
                             .clip(RoundedCornerShape(14.dp))
                             .background(FdPrimary)
                             .padding(16.dp)
                     ) {
-                        Text("СЕРИЯ", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
+                        Text(
+                            "СЕРИЯ",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
                         Spacer(Modifier.height(4.dp))
                         Text("${uiState.streak} 🔥", fontFamily = OutfitFamily, fontWeight = FontWeight.Black, fontSize = 34.sp, color = Color.White)
                         Spacer(Modifier.height(2.dp))
@@ -97,15 +117,28 @@ fun StatsScreen(viewModel: HomeViewModel) {
                     }
                     // Рекорд — outlined
                     Column(
-                        Modifier.weight(1f)
+                        Modifier
+                            .weight(1f)
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.surface)
                             .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                             .padding(16.dp)
                     ) {
-                        Text("РЕКОРД", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "РЕКОРД",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Spacer(Modifier.height(4.dp))
-                        Text("${uiState.streakRecord}", fontFamily = OutfitFamily, fontWeight = FontWeight.Black, fontSize = 34.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "${uiState.streakRecord}",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 34.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Spacer(Modifier.height(2.dp))
                         Text("дней подряд", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -146,7 +179,10 @@ fun StatsScreen(viewModel: HomeViewModel) {
                         Spacer(Modifier.height(6.dp))
                         LinearProgressIndicator(
                             progress = { xpProgress },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(50)),
                             color = Color(0xFFE6A000),
                             trackColor = Color(0xFFE6A000).copy(alpha = 0.25f)
                         )
@@ -164,7 +200,9 @@ fun StatsScreen(viewModel: HomeViewModel) {
             // Reviews chart with range selector
             item {
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp)
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surface)
                         .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
@@ -175,9 +213,16 @@ fun StatsScreen(viewModel: HomeViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Повторения", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "Повторения",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Row(
-                            Modifier.clip(RoundedCornerShape(8.dp))
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
                                 .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                         ) {
                             StatsRange.values().forEach { r ->
@@ -201,7 +246,9 @@ fun StatsScreen(viewModel: HomeViewModel) {
                     RangeBarChart(
                         stats = rangeStats,
                         showWeekdayLabels = range == StatsRange.WEEK,
-                        modifier = Modifier.fillMaxWidth().height(96.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(96.dp)
                     )
                 }
                 Spacer(Modifier.height(14.dp))
@@ -210,7 +257,9 @@ fun StatsScreen(viewModel: HomeViewModel) {
             // 3-tile grid: learned / in progress / accuracy
             item {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     MiniStatTile("$learnedCount", "выучено", FdPrimary, Modifier.weight(1f))
@@ -223,17 +272,27 @@ fun StatsScreen(viewModel: HomeViewModel) {
             // Year heatmap
             item {
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp)
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surface)
                         .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                         .padding(16.dp)
                 ) {
-                    Text("АКТИВНОСТЬ", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "АКТИВНОСТЬ",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(Modifier.height(10.dp))
                     MonthActivityCalendar(allStats = allStats, modifier = Modifier.fillMaxWidth())
                 }
             }
+
+            item { Spacer(Modifier.size(80.dp)) }
         }
     }
 }
@@ -249,7 +308,13 @@ private fun MiniStatTile(value: String, label: String, color: Color, modifier: M
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(value, fontFamily = OutfitFamily, fontWeight = FontWeight.Black, fontSize = 22.sp, color = color)
-        Text(label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+        Text(
+            label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
 }
 
@@ -261,9 +326,13 @@ private fun RangeBarChart(stats: List<DailyStats>, showWeekdayLabels: Boolean, m
     val weekdays = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
 
     Column(modifier) {
-        Row(Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(Modifier
+            .fillMaxWidth()
+            .weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             stats.forEach { day ->
-                Canvas(Modifier.weight(1f).fillMaxHeight()) {
+                Canvas(Modifier
+                    .weight(1f)
+                    .fillMaxHeight()) {
                     val h = if (day.reviewCount == 0) 2.dp.toPx()
                     else (day.reviewCount.toFloat() / maxCount * size.height).coerceAtLeast(2.dp.toPx())
                     drawRoundRect(
@@ -285,6 +354,7 @@ private fun RangeBarChart(stats: List<DailyStats>, showWeekdayLabels: Boolean, m
                             val dow = runCatching { LocalDate.parse(day.date).dayOfWeek.value }.getOrDefault(idx + 1)
                             weekdays.getOrElse(dow - 1) { "" }
                         }
+
                         stats.size <= 31 -> if (idx % 5 == 0) day.date.takeLast(2) else ""
                         else -> ""
                     }
@@ -355,7 +425,7 @@ private fun MonthActivityCalendar(allStats: List<DailyStats>, modifier: Modifier
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Следующий месяц",
                     tint = if (!isCurrentMonth) MaterialTheme.colorScheme.onSurface
-                           else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                 )
             }
         }
@@ -467,7 +537,8 @@ private fun MonthActivityCalendar(allStats: List<DailyStats>, modifier: Modifier
             Spacer(Modifier.width(4.dp))
             listOf(0f, 0.2f, 0.45f, 0.7f, 1f).forEach { alpha ->
                 Box(
-                    Modifier.size(10.dp)
+                    Modifier
+                        .size(10.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .background(if (alpha == 0f) emptyCellColor else FdPrimary.copy(alpha = alpha))
                 )
