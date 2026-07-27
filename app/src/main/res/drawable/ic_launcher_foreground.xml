@@ -4,24 +4,43 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Book icon centered -->
-    <group android:pivotX="54" android:pivotY="54" android:rotation="-4">
-        <!-- Book cover -->
-        <path android:pathData="M34,27 L84,27 Q86,27 86,29 L86,83 Q86,85 84,85 L34,85 Q32,85 32,83 L32,29 Q32,27 34,27 Z"
-            android:fillColor="#302e2c"/>
-        <!-- Spine -->
-        <path android:pathData="M34,27 L42,27 L42,85 L34,85 Q32,85 32,83 L32,29 Q32,27 34,27 Z"
-            android:fillColor="#ff4a26"/>
-        <!-- Book lines -->
-        <path android:pathData="M48,41 L80,41 L80,45 L48,45 Z"
-            android:fillColor="#f3f2f2" android:alpha="0.92"/>
-        <path android:pathData="M48,57 L80,57 L80,61 L48,61 Z"
-            android:fillColor="#f3f2f2" android:alpha="0.92"/>
-        <path android:pathData="M48,73 L68,73 L68,77 L48,77 Z"
-            android:fillColor="#f3f2f2" android:alpha="0.65"/>
+    <!-- Back card: brand blue, rotated -12° -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="-12">
+        <path
+            android:fillColor="#4255FF"
+            android:pathData="M37,24 L71,24 Q77,24 77,30 L77,78 Q77,84 71,84 L37,84 Q31,84 31,78 L31,30 Q31,24 37,24 Z" />
+        <path
+            android:fillColor="#7A8FFF"
+            android:alpha="0.55"
+            android:pathData="M40,35 L68,35 L68,38.5 L40,38.5 Z" />
+        <path
+            android:fillColor="#7A8FFF"
+            android:alpha="0.35"
+            android:pathData="M40,44 L60,44 L60,47 L40,47 Z" />
     </group>
 
-    <!-- Ribbon bookmark -->
-    <path android:pathData="M68,18 L74,18 Q76,18 76,20 L76,48 L68,42 L60,48 L60,20 Q60,18 62,18 L68,18 Z"
-        android:fillColor="#ff5230"/>
+    <!-- Front card: white -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37,24 L71,24 Q77,24 77,30 L77,78 Q77,84 71,84 L37,84 Q31,84 31,78 L31,30 Q31,24 37,24 Z" />
+
+    <!-- Letter F -->
+    <!-- Left bar -->
+    <path android:fillColor="#4255FF"
+        android:pathData="M43,39 L48,39 L48,69 L43,69 Z" />
+    <!-- Top crossbar -->
+    <path android:fillColor="#4255FF"
+        android:pathData="M43,39 L55,39 L55,44 L43,44 Z" />
+    <!-- Middle crossbar -->
+    <path android:fillColor="#4255FF"
+        android:pathData="M43,53 L53,53 L53,58 L43,58 Z" />
+
+    <!-- Letter D (outer – inner = hollow D via evenOdd) -->
+    <path
+        android:fillColor="#4255FF"
+        android:fillType="evenOdd"
+        android:pathData="M59,39 L67,39 Q73,39 73,47 L73,61 Q73,69 67,69 L59,69 Z M63,43 L66,43 Q69,43 69,47 L69,61 Q69,65 66,65 L63,65 Z" />
 </vector>
