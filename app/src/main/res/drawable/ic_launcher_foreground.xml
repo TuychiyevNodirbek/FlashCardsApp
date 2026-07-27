@@ -27,20 +27,8 @@
         android:fillColor="#FFFFFF"
         android:pathData="M37,24 L71,24 Q77,24 77,30 L77,78 Q77,84 71,84 L37,84 Q31,84 31,78 L31,30 Q31,24 37,24 Z" />
 
-    <!-- Letter F -->
-    <!-- Left bar -->
-    <path android:fillColor="#4255FF"
-        android:pathData="M43,39 L48,39 L48,69 L43,69 Z" />
-    <!-- Top crossbar -->
-    <path android:fillColor="#4255FF"
-        android:pathData="M43,39 L55,39 L55,44 L43,44 Z" />
-    <!-- Middle crossbar -->
-    <path android:fillColor="#4255FF"
-        android:pathData="M43,53 L53,53 L53,58 L43,58 Z" />
-
-    <!-- Letter D (outer – inner = hollow D via evenOdd) -->
+    <!-- Lightning bolt: centered on white card -->
     <path
         android:fillColor="#4255FF"
-        android:fillType="evenOdd"
-        android:pathData="M59,39 L67,39 Q73,39 73,47 L73,61 Q73,69 67,69 L59,69 Z M63,43 L66,43 Q69,43 69,47 L69,61 Q69,65 66,65 L63,65 Z" />
+        android:pathData="M59,36 L44,58 L53,58 L47,74 L65,52 L56,52 Z" />
 </vector>
