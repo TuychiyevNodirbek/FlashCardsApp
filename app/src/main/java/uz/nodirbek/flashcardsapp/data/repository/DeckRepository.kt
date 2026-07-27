@@ -22,7 +22,8 @@ class DeckRepository(private val deckDao: DeckDao) {
 
     suspend fun insertDeck(deck: Deck) = deckDao.insertDeck(deck.toEntity())
 
-    suspend fun updateDeck(deck: Deck) = deckDao.updateDeck(deck.toEntity())
+    suspend fun updateDeck(deck: Deck) =
+        deckDao.updateDeck(deck.toEntity().copy(updatedAt = System.currentTimeMillis()))
 
     suspend fun deleteDeck(deck: Deck) = deckDao.deleteDeck(deck.toEntity())
 
@@ -37,7 +38,11 @@ private fun DeckEntity.toDomain(): Deck = Deck(
     name = name,
     parentId = parentId,
     colorHex = colorHex,
-    createdAt = createdAt
+    createdAt = createdAt,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt,
+    sortOrder = sortOrder,
+    updatedAt = updatedAt
 )
 
 private fun Deck.toEntity(): DeckEntity = DeckEntity(
@@ -45,5 +50,9 @@ private fun Deck.toEntity(): DeckEntity = DeckEntity(
     name = name,
     parentId = parentId,
     colorHex = colorHex,
-    createdAt = createdAt
+    createdAt = createdAt,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt,
+    sortOrder = sortOrder,
+    updatedAt = updatedAt
 )

@@ -81,7 +81,20 @@ class HomeViewModel(
                 children = children
             )
         }
-        return decks.filter { it.parentId == null }.map { statsFor(it.id) }
+        return decks.filter { it.parentId == null }
+            .map { statsFor(it.id) }
+            .sortedWith(compareByDescending<DeckWithStats> { it.deck.isPinned }.thenBy { it.deck.createdAt })
+    }
+
+    /** +30 XP за юнит, +20 бонус если точность ≥ 90%. Возвращает заработанное XP. */
+    fun addXpForUnit(correct: Int, total: Int): Int {
+        val bonus = if (total > 0 && correct.toFloat() / total >= 0.9f) 20 else 0
+        val earned = 30 + bonus
+        viewModelScope.launch {
+            preferencesDataStore.addXp(earned.toLong())
+            updateStreak()
+        }
+        return earned
     }
 
     fun rateCard(cardId: String, quality: Int) {
@@ -125,6 +138,81 @@ class HomeViewModel(
         }
     }
 
+    fun deleteDeck(deck: Deck) {
+        viewModelScope.launch {
+            deckRepository.deleteDeck(deck)
+            cardRepository.deleteCardsByDeck(deck.id)
+        }
+    }
+
+    fun updateDeck(deck: Deck) {
+        viewModelScope.launch { deckRepository.updateDeck(deck) }
+    }
+
+    /** Создать subRow (тему) внутри курса; sortOrder = следующий за максимальным. */
+    fun addSubRow(courseDeckId: String, name: String, colorHex: String = "#4255FF") {
+        viewModelScope.launch {
+            val siblings = deckRepository.getChildDecks(courseDeckId).first()
+            val nextOrder = (siblings.maxOfOrNull { it.sortOrder } ?: -1) + 1
+            deckRepository.insertDeck(
+                Deck(
+                    id = java.util.UUID.randomUUID().toString(),
+                    name = name,
+                    parentId = courseDeckId,
+                    colorHex = colorHex,
+                    sortOrder = nextOrder
+                )
+            )
+        }
+    }
+
+    /** Переместить subRow вверх/вниз (delta = -1 / +1) среди тем курса. */
+    fun moveSubRow(deck: Deck, delta: Int) {
+        viewModelScope.launch {
+            val parentId = deck.parentId ?: return@launch
+            val siblings = deckRepository.getChildDecks(parentId).first()
+            val idx = siblings.indexOfFirst { it.id == deck.id }
+            val targetIdx = idx + delta
+            if (idx == -1 || targetIdx !in siblings.indices) return@launch
+            // Нормализуем sortOrder по текущему порядку, затем меняем местами
+            val normalized = siblings.mapIndexed { i, d -> d.copy(sortOrder = i) }.toMutableList()
+            val moved = normalized[idx].copy(sortOrder = targetIdx)
+            normalized[idx] = normalized[targetIdx].copy(sortOrder = idx)
+            normalized[targetIdx] = moved
+            normalized.forEach { deckRepository.updateDeck(it) }
+        }
+    }
+
+    /** Id колоды + всех её потомков (для карточек курса вместе с темами). */
+    fun getDeckWithDescendantIds(deckId: String): Set<String> {
+        fun findNode(list: List<DeckWithStats>): DeckWithStats? {
+            list.forEach { n ->
+                if (n.deck.id == deckId) return n
+                findNode(n.children)?.let { return it }
+            }
+            return null
+        }
+
+        val node = findNode(_uiState.value.decks) ?: return setOf(deckId)
+        val ids = mutableSetOf<String>()
+        fun collect(n: DeckWithStats) {
+            ids += n.deck.id
+            n.children.forEach(::collect)
+        }
+        collect(node)
+        return ids
+    }
+
+    fun pinDeck(deck: Deck) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            deckRepository.updateDeck(
+                if (deck.isPinned) deck.copy(isPinned = false, pinnedAt = 0L)
+                else deck.copy(isPinned = true, pinnedAt = now)
+            )
+        }
+    }
+
     fun addCard(card: Card) {
         viewModelScope.launch { cardRepository.insertCard(card) }
     }
@@ -141,18 +229,27 @@ class HomeViewModel(
         viewModelScope.launch { cardRepository.deleteCard(card) }
     }
 
-    /** Due queue for a deck, capped by the daily limits from Settings. */
+    /** Due queue for a deck (включая темы-потомки), capped by the daily limits from Settings. */
     fun getDueCardsForDeck(deckId: String): List<Card> {
         val today = RateCardUseCase.getTodayDate()
         val state = _uiState.value
-        val due = state.cards.filter { it.deckId == deckId && it.dueDate <= today }
+        val ids = if (deckId == ALL_DECKS) null else getDeckWithDescendantIds(deckId)
+        val due = state.cards.filter { (ids == null || it.deckId in ids) && it.dueDate <= today }
         val newCards = due.filter { it.reps == 0 }.take(state.dailyNewLimit)
         val reviewCards = due.filter { it.reps > 0 }.take(state.dailyReviewLimit)
         return newCards + reviewCards
     }
 
-    fun getCardsForDeck(deckId: String): List<Card> =
-        _uiState.value.cards.filter { it.deckId == deckId }
+    fun getCardsForDeck(deckId: String): List<Card> {
+        if (deckId == ALL_DECKS) return _uiState.value.cards
+        val ids = getDeckWithDescendantIds(deckId)
+        return _uiState.value.cards.filter { it.deckId in ids }
+    }
+
+    companion object {
+        /** Псевдо-id: повторение по всем колодам сразу. */
+        const val ALL_DECKS = "all"
+    }
 
     fun setTheme(value: String) {
         viewModelScope.launch { preferencesDataStore.setTheme(value) }

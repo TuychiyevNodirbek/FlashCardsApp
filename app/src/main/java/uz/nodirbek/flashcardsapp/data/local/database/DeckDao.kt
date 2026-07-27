@@ -28,7 +28,7 @@ interface DeckDao {
     @Query("SELECT * FROM decks WHERE parentId IS NULL ORDER BY createdAt ASC")
     fun getRootDecks(): Flow<List<DeckEntity>>
 
-    @Query("SELECT * FROM decks WHERE parentId = :parentId ORDER BY createdAt ASC")
+    @Query("SELECT * FROM decks WHERE parentId = :parentId ORDER BY sortOrder ASC, createdAt ASC")
     fun getChildDecks(parentId: String): Flow<List<DeckEntity>>
 
     @Query("SELECT COUNT(*) FROM cards WHERE deckId = :deckId")

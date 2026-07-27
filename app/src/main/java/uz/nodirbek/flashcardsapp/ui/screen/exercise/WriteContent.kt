@@ -31,6 +31,7 @@ fun WriteContent(
     cards: List<Card>,
     onBackClick: () -> Unit,
     onDone: (correct: Int, total: Int) -> Unit,
+    showTopBar: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     if (cards.isEmpty()) {
@@ -93,7 +94,7 @@ fun WriteContent(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            ProgressAppBar(
+            if (showTopBar) ProgressAppBar(
                 title = "",
                 progress = if (errorQueue.totalPrimary > 0) answeredCount.toFloat() / errorQueue.totalPrimary else 0f,
                 onBackClick = onBackClick,

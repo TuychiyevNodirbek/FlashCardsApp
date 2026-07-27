@@ -120,35 +120,41 @@ fun UnitFlowScreen(
                 FlowStep.FLASHCARDS -> FlashcardsContent(
                     cards = shuffledCards,
                     onDone = { vm.onStepFinished(0, 0) },
-                    onBackClick = { showExitDialog = true }
+                    onBackClick = { showExitDialog = true },
+                    showTopBar = false
                 )
                 FlowStep.MATCH -> MatchContent(
                     cards = shuffledCards,
                     onBackClick = { showExitDialog = true },
-                    onFinished = { _, _, _ -> vm.onStepFinished(0, 0) }
+                    onFinished = { _, _, _ -> vm.onStepFinished(0, 0) },
+                    showTopBar = false
                 )
                 FlowStep.TEST -> TestContent(
                     cards = shuffledCards,
                     allCardsForDistractors = uiState.cards,
                     onBackClick = { showExitDialog = true },
-                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) },
+                    showTopBar = false
                 )
                 FlowStep.AUDIO -> AudioContent(
                     cards = shuffledCards,
                     ttsLang = ttsLang,
                     ttsSpeed = ttsSpeed,
                     onBackClick = { showExitDialog = true },
-                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) },
+                    showTopBar = false
                 )
                 FlowStep.SCRAMBLE -> ScrambleContent(
                     cards = shuffledCards,
                     onBackClick = { showExitDialog = true },
-                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) },
+                    showTopBar = false
                 )
                 FlowStep.WRITE -> WriteContent(
                     cards = shuffledCards,
                     onBackClick = { showExitDialog = true },
-                    onDone = { correct, total -> vm.onStepFinished(correct, total) }
+                    onDone = { correct, total -> vm.onStepFinished(correct, total) },
+                    showTopBar = false
                 )
                 null -> {}
             }
@@ -156,40 +162,43 @@ fun UnitFlowScreen(
     }
 
     if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = {
-                Text("Выйти из юнита?", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            },
-            text = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showExitDialog = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "Выйти из юнита?",
+                    fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Text(
                     "Прогресс текущего шага будет потерян. Пройденные шаги сохранены.",
-                    fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp
+                    fontFamily = OutfitFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            },
-            confirmButton = {
+                Spacer(Modifier.height(8.dp))
                 PressButton(
                     onClick = { showExitDialog = false; onBack() },
-                    modifier = Modifier.height(44.dp),
-                    color = FdRed, shadowColor = FdRedDark, shape = RoundedCornerShape(10.dp)
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    color = FdRed, shadowColor = FdRedDark, shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Выйти", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                    Text("Выйти", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
                 }
-            },
-            dismissButton = {
                 PressButton(
                     onClick = { showExitDialog = false },
-                    modifier = Modifier.height(44.dp),
-                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shadowColor = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Продолжить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Продолжить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            textContentColor = MaterialTheme.colorScheme.onSurface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface
-        )
+            }
+        }
     }
 }

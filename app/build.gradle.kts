@@ -2,21 +2,27 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     id("kotlin-kapt")
 }
 
 android {
     namespace = "uz.nodirbek.flashcardsapp"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "uz.nodirbek.flashcardsapp"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        // Схемы Room для migration-тестов
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
     }
 
     buildTypes {
@@ -38,6 +44,12 @@ android {
 
 }
 
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -49,6 +61,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
     // Room
@@ -66,11 +79,19 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Serialization — формат .fdeck
+    implementation(libs.kotlinx.serialization.json)
+
     // Google Fonts (Outfit + Inter)
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.8")
+    implementation(libs.androidx.compose.ui.text.google.fonts)
+
+    // Haze — backdrop blur / liquid glass
+    implementation(libs.haze)
+    implementation(libs.haze.materials)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

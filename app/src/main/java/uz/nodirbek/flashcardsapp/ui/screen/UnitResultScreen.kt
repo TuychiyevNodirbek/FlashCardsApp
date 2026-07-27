@@ -30,6 +30,7 @@ fun UnitResultScreen(
     unitIndex: Int,
     correctAnswers: Int,
     totalAnswers: Int,
+    xpEarned: Int = 0,
     hasNextUnit: Boolean,
     onBackToUnits: () -> Unit,
     onNextUnit: () -> Unit
@@ -84,6 +85,28 @@ fun UnitResultScreen(
                     isPerfect = isPerfect,
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            // XP earned chip
+            if (xpEarned > 0) {
+                Spacer(Modifier.height(20.dp))
+                val xpBg = if (isPerfect) Color.White.copy(alpha = 0.2f) else Color(0xFFFFF3B0)
+                val xpText = if (isPerfect) Color.White else Color(0xFFA07800)
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(xpBg)
+                        .border(1.5.dp, xpText.copy(alpha = 0.4f), RoundedCornerShape(50))
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "+$xpEarned XP",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        color = xpText
+                    )
+                }
             }
 
             Spacer(Modifier.height(36.dp))

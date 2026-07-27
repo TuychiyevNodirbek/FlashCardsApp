@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
@@ -27,12 +28,15 @@ fun AddWordBottomSheet(
     onDismiss: () -> Unit,
     onSave: (Card) -> Unit,
     deckId: String = "default",
+    subRows: List<Deck> = emptyList(),
     onSaveAndNext: ((Card) -> Unit)? = null
 ) {
     var front by remember { mutableStateOf("") }
     var back by remember { mutableStateOf("") }
     var frontError by remember { mutableStateOf(false) }
     var backError by remember { mutableStateOf(false) }
+    // Куда сохранять: последняя созданная тема по умолчанию, иначе сам курс
+    var targetDeckId by remember { mutableStateOf(subRows.lastOrNull()?.id ?: deckId) }
 
     fun buildCard(): Card? {
         frontError = front.isBlank()
@@ -40,7 +44,7 @@ fun AddWordBottomSheet(
         if (frontError || backError) return null
         return Card(
             id = java.util.UUID.randomUUID().toString(),
-            deckId = deckId,
+            deckId = targetDeckId,
             front = front.trim(),
             back = back.trim(),
             dueDate = RateCardUseCase.getTodayDate(),
@@ -99,6 +103,38 @@ fun AddWordBottomSheet(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+            }
+
+            // Выбор темы (subRow), если они есть у курса
+            if (subRows.isNotEmpty()) {
+                Text(
+                    "Тема",
+                    fontFamily = OutfitFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        SubRowChip(
+                            label = "Общее",
+                            isActive = targetDeckId == deckId,
+                            onClick = { targetDeckId = deckId }
+                        )
+                    }
+                    items(subRows.size) { i ->
+                        val subRow = subRows[i]
+                        SubRowChip(
+                            label = subRow.name,
+                            isActive = targetDeckId == subRow.id,
+                            onClick = { targetDeckId = subRow.id }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
             }
 
             // Input fields
@@ -166,6 +202,31 @@ fun AddWordBottomSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SubRowChip(label: String, isActive: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isActive) FdPrimary else MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                1.5.dp,
+                if (isActive) FdPrimaryDark else MaterialTheme.colorScheme.outline,
+                RoundedCornerShape(10.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp)
+    ) {
+        Text(
+            label,
+            fontFamily = OutfitFamily,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 12.sp,
+            color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
+        )
     }
 }
 

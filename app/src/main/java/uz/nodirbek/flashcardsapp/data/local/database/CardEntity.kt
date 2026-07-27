@@ -1,10 +1,11 @@
 package uz.nodirbek.flashcardsapp.data.local.database
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Entity(tableName = "cards")
+@Entity(tableName = "cards", indices = [Index("deckId")])
 data class CardEntity(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
@@ -16,5 +17,6 @@ data class CardEntity(
     val interval: Int = 0,
     val dueDate: String,
     val lastReviewed: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
 )

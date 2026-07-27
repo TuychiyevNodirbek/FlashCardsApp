@@ -57,7 +57,13 @@ class UnitFlowViewModel(
             val units = unitRepository.getUnits(deckId).first()
             val unit = units.getOrNull(unitIndex)
             if (unit != null) {
-                _uiState.update { it.copy(cards = unit.cards, isLoading = false) }
+                // Resume: продолжить с сохранённого шага, если юнит начат, но не завершён
+                val resumeStep = if (!unit.completed && unit.completedSteps in 1 until _uiState.value.steps.size) {
+                    unit.completedSteps
+                } else {
+                    0
+                }
+                _uiState.update { it.copy(cards = unit.cards, stepIndex = resumeStep, isLoading = false) }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
             }

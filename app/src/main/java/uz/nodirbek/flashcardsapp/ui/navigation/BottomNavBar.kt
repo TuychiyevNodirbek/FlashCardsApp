@@ -5,41 +5,34 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
+import uz.nodirbek.flashcardsapp.ui.theme.LocalIsDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
 import uz.nodirbek.flashcardsapp.R
 
 private data class BottomNavItem(
@@ -56,45 +49,56 @@ private val items = listOf(
 )
 
 @Composable
-fun BottomNavBar(navController: NavController, modifier: Modifier = Modifier) {
+fun BottomNavBar(
+    navController: NavController,
+    hazeState: HazeState,
+    modifier: Modifier = Modifier
+) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
-    val glassBackground = if (isDark)
-        Color(0xFF2C2C2E).copy(alpha = 0.82f)
+    // Liquid glass colors
+    val tintColor = if (isDark)
+        Color(0xFF1C1C1E).copy(alpha = 0.55f)
     else
-        Color(0xFFFFFFFF).copy(alpha = 0.72f)
+        Color(0xFFFFFFFF).copy(alpha = 0.45f)
 
-    val borderTop = if (isDark)
-        Color.White.copy(alpha = 0.25f)
-    else
-        Color.White.copy(alpha = 0.90f)
-
-    val borderBottom = if (isDark)
-        Color.White.copy(alpha = 0.05f)
-    else
-        Color.White.copy(alpha = 0.30f)
+    val hazeStyle = HazeStyle(
+        blurRadius = 24.dp,
+        backgroundColor = Color.Transparent,
+        tints = listOf(HazeTint(tintColor))
+    )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 36.dp, vertical = 14.dp)
+            .padding(horizontal = 28.dp, vertical = 16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
                 .clip(CircleShape)
-                .background(glassBackground)
-                .border(
-                    width = Dp.Hairline,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(borderTop, borderBottom)
-                    ),
-                    shape = CircleShape
-                ),
+                // Real backdrop blur via haze
+                .hazeEffect(state = hazeState, style = hazeStyle)
+                // Specular top highlight — light mode only
+                .drawWithContent {
+                    drawContent()
+                    if (!isDark) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.60f),
+                                    Color.Transparent
+                                ),
+                                startY = 0f,
+                                endY = size.height * 0.32f
+                            )
+                        )
+                    }
+                },
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -106,7 +110,7 @@ fun BottomNavBar(navController: NavController, modifier: Modifier = Modifier) {
                     label = "alpha_${item.label}"
                 )
                 val scale by animateFloatAsState(
-                    targetValue = if (selected) 1f else 0.92f,
+                    targetValue = if (selected) 1f else 0.90f,
                     animationSpec = spring(
                         stiffness = Spring.StiffnessLow,
                         dampingRatio = Spring.DampingRatioMediumBouncy
@@ -124,7 +128,10 @@ fun BottomNavBar(navController: NavController, modifier: Modifier = Modifier) {
                             detectTapGestures {
                                 if (currentRoute != item.screen.route) {
                                     navController.navigate(item.screen.route) {
-                                        popUpTo(Screen.Home.route) { saveState = true }
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                            inclusive = false
+                                        }
                                         launchSingleTop = true
                                         restoreState = true
                                     }

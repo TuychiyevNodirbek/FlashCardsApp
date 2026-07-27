@@ -64,6 +64,7 @@ fun FlashcardsContent(
     ttsSpeed: Float = 1f,
     onDone: () -> Unit,
     onBackClick: () -> Unit,
+    showTopBar: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
@@ -100,7 +101,7 @@ fun FlashcardsContent(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
+            if (showTopBar) Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
                 Column {
                     Row(
                         Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),

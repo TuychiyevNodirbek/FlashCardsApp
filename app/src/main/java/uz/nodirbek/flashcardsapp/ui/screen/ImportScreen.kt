@@ -2,6 +2,11 @@ package uz.nodirbek.flashcardsapp.ui.screen
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +27,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import uz.nodirbek.flashcardsapp.data.transfer.DeckTransferRepository
+import uz.nodirbek.flashcardsapp.data.transfer.FdeckFile
+import uz.nodirbek.flashcardsapp.data.transfer.FdeckParseException
+import uz.nodirbek.flashcardsapp.data.transfer.FdeckVersionException
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
@@ -32,6 +43,7 @@ import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 @Composable
 fun ImportScreen(
     viewModel: HomeViewModel,
+    deckTransferRepository: DeckTransferRepository? = null,
     onCardsImported: (List<Card>) -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -45,6 +57,9 @@ fun ImportScreen(
     var showCreateDeckDialog by remember { mutableStateOf(false) }
     var newDeckName by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showSuccessSnackbar by remember { mutableStateOf(false) }
+    var fdeckPreview by remember { mutableStateOf<FdeckFile?>(null) }
 
     val allDecks = uiState.decks.flatMap { listOf(it) + it.children.flatMap { child ->
         fun flattenDecks(d: uz.nodirbek.flashcardsapp.ui.state.DeckWithStats): List<uz.nodirbek.flashcardsapp.ui.state.DeckWithStats> {
@@ -73,6 +88,26 @@ fun ImportScreen(
                 if (content.isBlank()) {
                     message = "Файл пустой"
                     isError = true
+                    isLoading = false
+                    return@rememberLauncherForActivityResult
+                }
+
+                // .fdeck detection — if JSON, try to parse as fdeck before CSV logic
+                if (content.trimStart().startsWith("{")) {
+                    if (deckTransferRepository != null) {
+                        try {
+                            fdeckPreview = deckTransferRepository.parse(content)
+                        } catch (e: FdeckVersionException) {
+                            message = "Файл создан в более новой версии приложения"
+                            isError = true
+                        } catch (e: FdeckParseException) {
+                            message = e.message ?: "Не удалось прочитать .fdeck файл"
+                            isError = true
+                        }
+                    } else {
+                        message = "Импорт .fdeck не поддерживается"
+                        isError = true
+                    }
                     isLoading = false
                     return@rememberLauncherForActivityResult
                 }
@@ -119,6 +154,11 @@ fun ImportScreen(
                     isSuccess = true
                     isError = false
                     message = ""
+                    showSuccessSnackbar = true
+                    scope.launch {
+                        delay(3000)
+                        showSuccessSnackbar = false
+                    }
                 }
             } catch (e: Exception) {
                 message = "Ошибка: ${e.message}"
@@ -129,6 +169,7 @@ fun ImportScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -156,7 +197,7 @@ fun ImportScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .background(FdPrimaryLight)
                         .border(2.dp, FdPrimary.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                        .clickable(enabled = !isLoading) { fileLauncher.launch("text/*") },
+                        .clickable(enabled = !isLoading) { fileLauncher.launch("*/*") },
                     contentAlignment = Alignment.Center
                 ) {
                     if (isLoading) {
@@ -174,10 +215,110 @@ fun ImportScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "CSV, TSV — до 5000 строк",
+                                "CSV, TSV или .fdeck файл",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+                }
+            }
+
+            // .fdeck preview — shown after picking a .fdeck file, before user confirms import
+            if (fdeckPreview != null) {
+                item {
+                    val preview = fdeckPreview!!
+                    val totalWords = preview.deck.cards.size +
+                        preview.deck.subRows.sumOf { it.cards.size }
+                    val themesCount = preview.deck.subRows.size
+
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(FdPrimaryLight)
+                            .border(2.dp, FdPrimary.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                "📦 Найдена колода .fdeck",
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp,
+                                color = FdPrimary
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                preview.deck.name,
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            val subtitle = buildString {
+                                if (themesCount > 0) append("$themesCount ${pluralThemes(themesCount)}, ")
+                                append("$totalWords ${pluralWords(totalWords)}")
+                            }
+                            Text(
+                                subtitle,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                PressButton(
+                                    onClick = { fdeckPreview = null },
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shadowColor = MaterialTheme.colorScheme.outline,
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        "Отмена",
+                                        fontFamily = OutfitFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                PressButton(
+                                    onClick = {
+                                        scope.launch {
+                                            isLoading = true
+                                            try {
+                                                deckTransferRepository!!.importDeck(preview)
+                                                fdeckPreview = null
+                                                importedCount = totalWords
+                                                isSuccess = true
+                                                isError = false
+                                                showSuccessSnackbar = true
+                                                delay(1800)
+                                                onBackClick()
+                                            } catch (e: Exception) {
+                                                message = e.message ?: "Ошибка импорта"
+                                                isError = true
+                                                fdeckPreview = null
+                                            }
+                                            isLoading = false
+                                        }
+                                    },
+                                    modifier = Modifier.weight(2f).height(44.dp),
+                                    color = FdPrimary,
+                                    shadowColor = FdPrimaryDark,
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isLoading
+                                ) {
+                                    Text(
+                                        if (isLoading) "Импорт..." else "Импортировать",
+                                        fontFamily = OutfitFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -389,7 +530,7 @@ fun ImportScreen(
             if (!isSuccess) {
                 item {
                     PressButton(
-                        onClick = { fileLauncher.launch("text/*") },
+                        onClick = { fileLauncher.launch("*/*") },
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         color = FdPrimary,
                         shadowColor = FdPrimaryDark,
@@ -408,6 +549,47 @@ fun ImportScreen(
             }
         }
     }
+
+    // Top success snackbar
+    AnimatedVisibility(
+        visible = showSuccessSnackbar,
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1AA34A))
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("✅", fontSize = 18.sp)
+                Column {
+                    Text(
+                        "Импорт успешен!",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        "Добавлено $importedCount карточек",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+            }
+        }
+    }
+    } // end outer Box
 
     // Create deck dialog
     if (showCreateDeckDialog) {
@@ -478,6 +660,20 @@ private fun FormatRow(label: String, value: String) {
         Spacer(Modifier.width(8.dp))
         Text(value, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
     }
+}
+
+private fun pluralWords(n: Int) = when {
+    n % 100 in 11..19 -> "слов"
+    n % 10 == 1 -> "слово"
+    n % 10 in 2..4 -> "слова"
+    else -> "слов"
+}
+
+private fun pluralThemes(n: Int) = when {
+    n % 100 in 11..19 -> "тем"
+    n % 10 == 1 -> "тема"
+    n % 10 in 2..4 -> "темы"
+    else -> "тем"
 }
 
 private fun detectDelimiter(lines: List<String>): Char {

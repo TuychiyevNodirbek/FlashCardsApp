@@ -30,6 +30,7 @@ fun AudioContent(
     ttsSpeed: Float = 1f,
     onBackClick: () -> Unit,
     onDone: (correct: Int, total: Int) -> Unit,
+    showTopBar: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     if (cards.isEmpty()) {
@@ -76,7 +77,7 @@ fun AudioContent(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            ProgressAppBar(
+            if (showTopBar) ProgressAppBar(
                 title = "",
                 progress = if (errorQueue.totalPrimary > 0) answeredCount.toFloat() / errorQueue.totalPrimary else 0f,
                 onBackClick = onBackClick,

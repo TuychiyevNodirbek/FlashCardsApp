@@ -61,6 +61,7 @@ fun TestContent(
     onBackClick: () -> Unit,
     onDone: (correct: Int, total: Int) -> Unit,
     onAnswerRecorded: ((card: uz.nodirbek.flashcardsapp.domain.model.Card, answer: String, correct: Boolean) -> Unit)? = null,
+    showTopBar: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     if (cards.isEmpty()) {
@@ -89,33 +90,37 @@ fun TestContent(
         }
     }
 
-    if (isWritten) {
-        WrittenQuestion(
-            card = currentCard,
-            index = answeredCount,
-            total = errorQueue.totalPrimary,
-            onAnswer = { answer ->
-                val correct = answer.trim().equals(currentCard.back.trim(), ignoreCase = true)
-                advance(currentCard, answer, correct)
-            },
-            onBack = onBackClick
-        )
-    } else {
-        val options = remember(currentCard, allCardsForDistractors) {
-            val distractors = allCardsForDistractors.filter { it.id != currentCard.id }.map { it.back }.shuffled().take(3)
-            (distractors + currentCard.back).shuffled()
+    key(currentCard.id) {
+        if (isWritten) {
+            WrittenQuestion(
+                card = currentCard,
+                index = answeredCount,
+                total = errorQueue.totalPrimary,
+                showTopBar = showTopBar,
+                onAnswer = { answer ->
+                    val correct = answer.trim().equals(currentCard.back.trim(), ignoreCase = true)
+                    advance(currentCard, answer, correct)
+                },
+                onBack = onBackClick
+            )
+        } else {
+            val options = remember(allCardsForDistractors) {
+                val distractors = allCardsForDistractors.filter { it.id != currentCard.id }.map { it.back }.shuffled().take(3)
+                (distractors + currentCard.back).shuffled()
+            }
+            MultiChoiceQuestion(
+                card = currentCard,
+                options = options,
+                index = answeredCount,
+                total = errorQueue.totalPrimary,
+                showTopBar = showTopBar,
+                onAnswer = { answer ->
+                    val correct = answer == currentCard.back
+                    advance(currentCard, answer, correct)
+                },
+                onBack = onBackClick
+            )
         }
-        MultiChoiceQuestion(
-            card = currentCard,
-            options = options,
-            index = answeredCount,
-            total = errorQueue.totalPrimary,
-            onAnswer = { answer ->
-                val correct = answer == currentCard.back
-                advance(currentCard, answer, correct)
-            },
-            onBack = onBackClick
-        )
     }
 }
 
@@ -133,12 +138,12 @@ private fun QuestionHeader(index: Int, total: Int, onBack: () -> Unit) {
 @Composable
 private fun MultiChoiceQuestion(
     card: Card, options: List<String>, index: Int, total: Int,
-    onAnswer: (String) -> Unit, onBack: () -> Unit
+    onAnswer: (String) -> Unit, onBack: () -> Unit, showTopBar: Boolean = true
 ) {
     var selected by remember { mutableStateOf<String?>(null) }
     var revealed by remember { mutableStateOf(false) }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { QuestionHeader(index, total, onBack) }) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { if (showTopBar) QuestionHeader(index, total, onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(24.dp))
             Text("Вопрос", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold)
@@ -205,13 +210,13 @@ private fun MultiChoiceQuestion(
 @Composable
 private fun WrittenQuestion(
     card: Card, index: Int, total: Int,
-    onAnswer: (String) -> Unit, onBack: () -> Unit
+    onAnswer: (String) -> Unit, onBack: () -> Unit, showTopBar: Boolean = true
 ) {
     var input by remember { mutableStateOf("") }
     var revealed by remember { mutableStateOf(false) }
     val isCorrect = input.trim().equals(card.back.trim(), ignoreCase = true)
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { QuestionHeader(index, total, onBack) }) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { if (showTopBar) QuestionHeader(index, total, onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(24.dp))
             Box(

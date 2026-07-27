@@ -1,5 +1,7 @@
 package uz.nodirbek.flashcardsapp.ui.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -8,16 +10,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
-import uz.nodirbek.flashcardsapp.data.repository.CardRepository
-import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
-import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.AppContainer
 import uz.nodirbek.flashcardsapp.ui.screen.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
@@ -25,25 +26,18 @@ import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 fun NavGraph(
     navController: NavHostController,
     homeViewModel: HomeViewModel,
-    unitRepository: UnitRepository,
-    cardRepository: CardRepository,
-    statsRepository: StatsRepository,
-    rateCardUseCase: RateCardUseCase
+    container: AppContainer
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = currentRoute in Screen.bottomNavRoots
 
     // State for match done params
-    var matchTimeSeconds by remember { mutableStateOf(0) }
-    // State for test results
+    var matchTimeSeconds by remember { mutableIntStateOf(0) }
+    // State for test results (сложный payload — через route не передать)
     var testResults by remember { mutableStateOf<List<TestResult>>(emptyList()) }
-    // State for unit result
-    var unitResultCorrect by remember { mutableStateOf(0) }
-    var unitResultTotal by remember { mutableStateOf(0) }
-    var unitResultIndex by remember { mutableStateOf(0) }
-    var unitResultDeckId by remember { mutableStateOf("") }
-    var unitResultHasNext by remember { mutableStateOf(false) }
+
+    val hazeState = remember { HazeState() }
 
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
@@ -53,20 +47,23 @@ fun NavGraph(
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+            modifier = Modifier
+                .padding(top = innerPadding.calculateTopPadding())
+                .haze(hazeState)
         ) {
 
             // ── Bottom-nav roots ─────────────────────────────────────────
             composable(
                 Screen.Home.route,
-                enterTransition = { BottomNavTransitions.enter() },
-                exitTransition = { UnderlyingScreenTransitions.exit() },
-                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
-                popExitTransition = { BottomNavTransitions.exit() }
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
             ) {
                 HomeScreen(
                     viewModel = homeViewModel,
-                    onNavigateToStudy = { navController.navigate(Screen.SrsReview.createRoute("default")) },
+                    deckTransferRepository = container.deckTransferRepository,
+                    onNavigateToStudy = { navController.navigate(Screen.SrsReview.createRoute(HomeViewModel.ALL_DECKS)) },
                     onNavigateToImport = { navController.navigate(Screen.Import.route) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     onNavigateToDeck = { deckId -> navController.navigate(Screen.Deck.createRoute(deckId)) }
@@ -75,20 +72,20 @@ fun NavGraph(
 
             composable(
                 Screen.Stats.route,
-                enterTransition = { BottomNavTransitions.enter() },
-                exitTransition = { UnderlyingScreenTransitions.exit() },
-                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
-                popExitTransition = { BottomNavTransitions.exit() }
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
             ) {
                 StatsScreen(viewModel = homeViewModel)
             }
 
             composable(
                 Screen.Settings.route,
-                enterTransition = { SideModalTransitions.enter() },
-                exitTransition = { UnderlyingScreenTransitions.exit() },
-                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
-                popExitTransition = { SideModalTransitions.popExit() }
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
             ) {
                 SettingsScreen(
                     viewModel = homeViewModel,
@@ -110,13 +107,16 @@ fun NavGraph(
                 DeckScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
+                    unitRepository = container.unitRepository,
                     onBack = { navController.popBackStack() },
                     onNavigateToSrs = { id -> navController.navigate(Screen.SrsReview.createRoute(id)) },
                     onNavigateToFlashcards = { id -> navController.navigate(Screen.Flashcards.createRoute(id)) },
                     onNavigateToTestSetup = { id -> navController.navigate(Screen.TestSetup.createRoute(id)) },
                     onNavigateToMatch = { id -> navController.navigate(Screen.Match.createRoute(id)) },
                     onNavigateToForgetting = { id -> navController.navigate(Screen.ForgettingEdge.createRoute(id)) },
-                    onNavigateToUnits = { id -> navController.navigate(Screen.UnitList.createRoute(id)) }
+                    onOpenUnit = { subRowDeckId, unitIndex ->
+                        navController.navigate(Screen.UnitFlow.createRoute(subRowDeckId, unitIndex))
+                    }
                 )
             }
 
@@ -137,22 +137,6 @@ fun NavGraph(
                     onSessionDone = { _, _, _ ->
                         // done screen is inlined in StudyScreen; this triggers after it
                     }
-                )
-            }
-
-            composable(
-                Screen.ReviewDone.route,
-                enterTransition = { ResultsTransitions.enter() },
-                exitTransition = { UnderlyingScreenTransitions.exit() },
-                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
-                popExitTransition = { ResultsTransitions.popExit() }
-            ) {
-                ReviewDoneScreen(
-                    sessionCount = 0,
-                    accuracy = 0f,
-                    xpEarned = 0,
-                    streak = homeViewModel.uiState.value.streak,
-                    onContinue = { navController.popBackStack() }
                 )
             }
 
@@ -188,14 +172,18 @@ fun NavGraph(
                     viewModel = homeViewModel,
                     onBackClick = { navController.popBackStack() },
                     onStartTest = { id, count, isWritten ->
-                        navController.navigate(Screen.Test.createRoute(id))
+                        navController.navigate(Screen.Test.createRoute(id, count, isWritten))
                     }
                 )
             }
 
             composable(
                 route = Screen.Test.route,
-                arguments = listOf(navArgument(Screen.Test.ARG) { type = NavType.StringType }),
+                arguments = listOf(
+                    navArgument(Screen.Test.ARG) { type = NavType.StringType },
+                    navArgument(Screen.Test.ARG_COUNT) { type = NavType.IntType; defaultValue = 10 },
+                    navArgument(Screen.Test.ARG_WRITTEN) { type = NavType.BoolType; defaultValue = false }
+                ),
                 enterTransition = { GameSetupTransitions.enter() },
                 exitTransition = { UnderlyingScreenTransitions.exit() },
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
@@ -205,6 +193,8 @@ fun NavGraph(
                 TestScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
+                    count = backStackEntry.arguments?.getInt(Screen.Test.ARG_COUNT) ?: 10,
+                    isWritten = backStackEntry.arguments?.getBoolean(Screen.Test.ARG_WRITTEN) ?: false,
                     onBackClick = { navController.popBackStack() },
                     onFinished = { results ->
                         testResults = results
@@ -288,24 +278,6 @@ fun NavGraph(
                 )
             }
 
-            // ── Unit List ────────────────────────────────────────────────
-            composable(
-                route = Screen.UnitList.route,
-                arguments = listOf(navArgument(Screen.UnitList.ARG) { type = NavType.StringType }),
-                enterTransition = { StudyTransitions.enter() },
-                exitTransition = { UnderlyingScreenTransitions.exit() },
-                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
-                popExitTransition = { StudyTransitions.popExit() }
-            ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.UnitList.ARG) ?: return@composable
-                UnitListScreen(
-                    deckId = deckId,
-                    unitRepository = unitRepository,
-                    onBack = { navController.popBackStack() },
-                    onOpenUnit = { idx -> navController.navigate(Screen.UnitFlow.createRoute(deckId, idx)) }
-                )
-            }
-
             // ── Unit Flow ────────────────────────────────────────────────
             composable(
                 route = Screen.UnitFlow.route,
@@ -324,21 +296,16 @@ fun NavGraph(
                 UnitFlowScreen(
                     deckId = deckId,
                     unitIndex = idx,
-                    unitRepository = unitRepository,
-                    cardRepository = cardRepository,
-                    statsRepository = statsRepository,
-                    rateCardUseCase = rateCardUseCase,
+                    unitRepository = container.unitRepository,
+                    cardRepository = container.cardRepository,
+                    statsRepository = container.statsRepository,
+                    rateCardUseCase = container.rateCardUseCase,
                     ttsLang = ttsState.ttsLang,
                     ttsSpeed = ttsState.ttsSpeed,
                     onBack = { navController.popBackStack() },
                     onFinished = { correct, total ->
-                        unitResultCorrect = correct
-                        unitResultTotal = total
-                        unitResultIndex = idx
-                        unitResultDeckId = deckId
-                        // hasNextUnit is resolved lazily in UnitResultScreen via unitRepository
-                        unitResultHasNext = true
-                        navController.navigate(Screen.UnitResult.route) {
+                        val xpEarned = homeViewModel.addXpForUnit(correct, total)
+                        navController.navigate(Screen.UnitResult.createRoute(deckId, idx, correct, total, xpEarned)) {
                             popUpTo(Screen.UnitFlow.route) { inclusive = true }
                         }
                     }
@@ -347,23 +314,37 @@ fun NavGraph(
 
             // ── Unit Result ──────────────────────────────────────────────
             composable(
-                Screen.UnitResult.route,
+                route = Screen.UnitResult.route,
+                arguments = listOf(
+                    navArgument(Screen.UnitResult.ARG_DECK) { type = NavType.StringType },
+                    navArgument(Screen.UnitResult.ARG_UNIT) { type = NavType.IntType },
+                    navArgument(Screen.UnitResult.ARG_CORRECT) { type = NavType.IntType },
+                    navArgument(Screen.UnitResult.ARG_TOTAL) { type = NavType.IntType },
+                    navArgument(Screen.UnitResult.ARG_XP) { type = NavType.IntType; defaultValue = 0 }
+                ),
                 enterTransition = { ResultsTransitions.enter() },
                 exitTransition = { UnderlyingScreenTransitions.exit() },
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { ResultsTransitions.popExit() }
-            ) {
+            ) { backStackEntry ->
+                val deckId = backStackEntry.arguments?.getString(Screen.UnitResult.ARG_DECK) ?: return@composable
+                val unitIndex = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_UNIT) ?: return@composable
+                val correct = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_CORRECT) ?: 0
+                val total = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_TOTAL) ?: 0
+                val xpEarned = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_XP) ?: 0
+                val units by container.unitRepository.getUnits(deckId)
+                    .collectAsState(initial = null)
                 UnitResultScreen(
-                    unitIndex = unitResultIndex,
-                    correctAnswers = unitResultCorrect,
-                    totalAnswers = unitResultTotal,
-                    hasNextUnit = unitResultHasNext,
+                    unitIndex = unitIndex,
+                    correctAnswers = correct,
+                    totalAnswers = total,
+                    xpEarned = xpEarned,
+                    hasNextUnit = units?.let { it.size > unitIndex + 1 } ?: false,
                     onBackToUnits = {
-                        navController.popBackStack(Screen.UnitList.route, inclusive = false)
+                        navController.popBackStack(Screen.Deck.route, inclusive = false)
                     },
                     onNextUnit = {
-                        val nextIdx = unitResultIndex + 1
-                        navController.navigate(Screen.UnitFlow.createRoute(unitResultDeckId, nextIdx)) {
+                        navController.navigate(Screen.UnitFlow.createRoute(deckId, unitIndex + 1)) {
                             popUpTo(Screen.UnitResult.route) { inclusive = true }
                         }
                     }
@@ -380,6 +361,7 @@ fun NavGraph(
             ) {
                 ImportScreen(
                     viewModel = homeViewModel,
+                    deckTransferRepository = container.deckTransferRepository,
                     onCardsImported = { cards ->
                         homeViewModel.addCards(cards)
                         navController.popBackStack()
@@ -393,6 +375,7 @@ fun NavGraph(
     if (showBottomBar) {
         BottomNavBar(
             navController = navController,
+            hazeState = hazeState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }

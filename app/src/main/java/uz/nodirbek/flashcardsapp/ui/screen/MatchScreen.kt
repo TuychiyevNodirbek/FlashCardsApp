@@ -103,6 +103,7 @@ fun MatchContent(
     cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
     onBackClick: () -> Unit,
     onFinished: (seconds: Int, isNewRecord: Boolean, bestSeconds: Int) -> Unit,
+    showTopBar: Boolean = true,
     modifier: Modifier = Modifier
 ) {
 
@@ -166,7 +167,7 @@ fun MatchContent(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
+            if (showTopBar) Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 0.dp) {
                 Column {
                     Row(
                         Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp),

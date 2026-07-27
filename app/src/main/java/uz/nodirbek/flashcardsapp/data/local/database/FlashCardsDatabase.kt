@@ -9,8 +9,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [CardEntity::class, DeckEntity::class, DailyStatsEntity::class, UnitProgressEntity::class],
-    version = 3,
-    exportSchema = false
+    version = 5,
+    exportSchema = true
 )
 abstract class FlashCardsDatabase : RoomDatabase() {
     abstract fun cardDao(): CardDao
@@ -21,6 +21,25 @@ abstract class FlashCardsDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: FlashCardsDatabase? = null
+
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE decks ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE decks ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE cards ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE decks SET updatedAt = createdAt")
+                db.execSQL("UPDATE cards SET updatedAt = createdAt")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_cards_deckId ON cards(deckId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_decks_parentId ON decks(parentId)")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE decks ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE decks ADD COLUMN pinnedAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -77,7 +96,7 @@ abstract class FlashCardsDatabase : RoomDatabase() {
                     FlashCardsDatabase::class.java,
                     "flashcards_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance

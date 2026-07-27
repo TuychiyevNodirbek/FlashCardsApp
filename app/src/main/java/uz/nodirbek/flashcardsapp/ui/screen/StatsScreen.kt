@@ -107,6 +107,54 @@ fun StatsScreen(viewModel: HomeViewModel) {
                 Spacer(Modifier.height(14.dp))
             }
 
+            // Level + XP tile
+            item {
+                val xpInLevel = (uiState.xp % 100).toInt()
+                val xpProgress = (xpInLevel / 100f).coerceIn(0f, 1f)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFFFF3B0))
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("⭐", fontSize = 28.sp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "Уровень ${uiState.level}",
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp,
+                                color = Color(0xFFA07800)
+                            )
+                            Text(
+                                "${uiState.xp} XP всего",
+                                fontSize = 12.sp,
+                                color = Color(0xFFA07800).copy(alpha = 0.75f)
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { xpProgress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)),
+                            color = Color(0xFFE6A000),
+                            trackColor = Color(0xFFE6A000).copy(alpha = 0.25f)
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "$xpInLevel / 100 XP до следующего уровня",
+                            fontSize = 11.sp,
+                            color = Color(0xFFA07800).copy(alpha = 0.7f)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+            }
+
             // Reviews chart with range selector
             item {
                 Column(

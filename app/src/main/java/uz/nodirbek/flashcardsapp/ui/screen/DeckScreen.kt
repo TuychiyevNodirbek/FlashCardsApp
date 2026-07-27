@@ -21,43 +21,58 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
 import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 private enum class CardFilter { ALL, NEW, LEARNING, DUE }
+private enum class DeckTab(val label: String) { PATH("Путь"), WORDS("Слова"), PRACTICE("Практика") }
+
+private val subRowColors = listOf(
+    "#4255FF", "#2EC748", "#FF9600", "#9069CD", "#FF4B4B", "#1CB0F6"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeckScreen(
     deckId: String,
     viewModel: HomeViewModel,
+    unitRepository: UnitRepository,
     onBack: () -> Unit,
     onNavigateToSrs: (String) -> Unit,
     onNavigateToFlashcards: (String) -> Unit,
     onNavigateToTestSetup: (String) -> Unit,
     onNavigateToMatch: (String) -> Unit,
     onNavigateToForgetting: (String) -> Unit,
-    onNavigateToUnits: (String) -> Unit = {}
+    onOpenUnit: (deckId: String, unitIndex: Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val deckWithStats = remember(uiState.decks, deckId) {
         fun findDeck(list: List<DeckWithStats>): DeckWithStats? =
-            list.firstOrNull { it.deck.id == deckId } ?: list.flatMap { it.children }.let { findDeck(it) }
+            list.firstOrNull { it.deck.id == deckId }
+                ?: list.flatMap { it.children }.let { if (it.isEmpty()) null else findDeck(it) }
         findDeck(uiState.decks)
     }
-    val deckCards = remember(uiState.cards, deckId) {
-        uiState.cards.filter { it.deckId == deckId }
+    // Карточки курса вместе с темами-потомками
+    val descendantIds = remember(uiState.decks, deckId) { viewModel.getDeckWithDescendantIds(deckId) }
+    val deckCards = remember(uiState.cards, descendantIds) {
+        uiState.cards.filter { it.deckId in descendantIds }
     }
+    val subRows = remember(deckWithStats) { deckWithStats?.children?.map { it.deck } ?: emptyList() }
 
+    var activeTab by remember { mutableStateOf(DeckTab.PATH) }
     var activeFilter by remember { mutableStateOf(CardFilter.ALL) }
     var showAddCardSheet by remember { mutableStateOf(false) }
     var editingCard by remember { mutableStateOf<Card?>(null) }
+    var showAddSubRowDialog by remember { mutableStateOf(false) }
+    var managingSubRow by remember { mutableStateOf<Deck?>(null) }
 
     val today = RateCardUseCase.getTodayDate()
     val filteredCards = remember(deckCards, activeFilter, today) {
@@ -109,184 +124,72 @@ fun DeckScreen(
                             Icon(Icons.Default.Add, null, tint = FdPrimary)
                         }
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
-                }
-            }
-        },
-        bottomBar = {
-            Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StudyModeBtn(
-                        label = "Карточки", emoji = "🃏",
-                        color = FdGreen, shadowColor = FdGreenDark,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToFlashcards(deckId) }
-                    )
-                    Box(Modifier.weight(1f)) {
-                        StudyModeBtn(
-                            label = "Учить SRS", emoji = "🔄",
-                            color = FdPrimary, shadowColor = FdPrimaryDark,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onNavigateToSrs(deckId) }
-                        )
-                        if ((deckWithStats?.dueCards ?: 0) > 0) {
+                    // Сегментированный переключатель табов
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        DeckTab.entries.forEach { tab ->
+                            val isActive = activeTab == tab
                             Box(
                                 Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = 4.dp, y = (-4).dp)
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .background(FdRed),
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(if (isActive) FdPrimary else Color.Transparent)
+                                    .clickable { activeTab = tab }
+                                    .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "${deckWithStats?.dueCards}",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    tab.label,
+                                    fontFamily = OutfitFamily,
+                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
-                    StudyModeBtn(
-                        label = "Тест", emoji = "✏️",
-                        color = FdOrange, shadowColor = FdOrangeDark,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToTestSetup(deckId) }
-                    )
-                    StudyModeBtn(
-                        label = "Match", emoji = "🎯",
-                        color = FdPurple, shadowColor = FdPurpleDark,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToMatch(deckId) }
-                    )
-                    StudyModeBtn(
-                        label = "Юниты", emoji = "📚",
-                        color = FdOrange, shadowColor = FdOrangeDark,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToUnits(deckId) }
-                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.5.dp)
                 }
             }
         }
     ) { padding ->
-        LazyColumn(
-            Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(bottom = 8.dp)
-        ) {
-            // Stats row
-            item {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    StatPill("${deckWithStats?.totalCards ?: 0}", "Всего", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
-                    StatPill("${deckWithStats?.newCards ?: 0}", "Новых", FdPrimary, Modifier.weight(1f))
-                    StatPill("${deckWithStats?.dueCards ?: 0}", "Учится", FdOrange, Modifier.weight(1f))
-                    StatPill(
-                        "${((deckWithStats?.totalCards ?: 0) - (deckWithStats?.newCards ?: 0) - (deckWithStats?.dueCards ?: 0)).coerceAtLeast(0)}",
-                        "Сегодня",
-                        FdRed,
-                        Modifier.weight(1f)
-                    )
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
-            }
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when (activeTab) {
+                DeckTab.PATH -> DeckPathContent(
+                    courseDeckId = deckId,
+                    unitRepository = unitRepository,
+                    dueCount = deckWithStats?.dueCards ?: 0,
+                    onOpenUnit = onOpenUnit,
+                    onStartReview = { onNavigateToSrs(deckId) },
+                    onAddSubRow = { showAddSubRowDialog = true },
+                    onSubRowLongPress = { managingSubRow = it },
+                    onAddWords = { showAddCardSheet = true }
+                )
 
-            // Forgetting edge warning
-            if ((deckWithStats?.dueCards ?: 0) > 0) {
-                item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(FdOrangeLight)
-                            .border(1.5.dp, FdOrange.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                            .clickable { onNavigateToForgetting(deckId) }
-                            .padding(12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("⚠️", fontSize = 14.sp)
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                "${deckWithStats?.dueCards} карточек на грани забывания",
-                                fontFamily = OutfitFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = FdOrangeDark,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text("›", fontSize = 16.sp, color = FdOrange)
-                        }
-                    }
-                }
-            }
+                DeckTab.WORDS -> WordsTabContent(
+                    deckWithStats = deckWithStats,
+                    filteredCards = filteredCards,
+                    activeFilter = activeFilter,
+                    onFilterChange = { activeFilter = it },
+                    today = today,
+                    onNavigateToForgetting = { onNavigateToForgetting(deckId) },
+                    onCardLongClick = { editingCard = it }
+                )
 
-            // Filter chips
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(CardFilter.values()) { filter ->
-                        val label = when (filter) {
-                            CardFilter.ALL -> "Все"
-                            CardFilter.NEW -> "Новые"
-                            CardFilter.LEARNING -> "Изучаются"
-                            CardFilter.DUE -> "Повторение"
-                        }
-                        val isActive = activeFilter == filter
-                        Box(
-                            Modifier
-                                .clip(CircleShape)
-                                .background(if (isActive) FdPrimary else MaterialTheme.colorScheme.surface)
-                                .border(1.5.dp, if (isActive) FdPrimaryDark else MaterialTheme.colorScheme.outline, CircleShape)
-                                .clickable { activeFilter = filter }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
-                        ) {
-                            Text(
-                                label,
-                                fontFamily = OutfitFamily,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 12.sp,
-                                color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Card list
-            if (filteredCards.isEmpty()) {
-                item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Нет карточек", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    }
-                }
-            } else {
-                items(filteredCards, key = { it.id }) { card ->
-                    CardListItem(
-                        card = card,
-                        todayDate = today,
-                        onLongClick = { editingCard = card }
-                    )
-                }
+                DeckTab.PRACTICE -> PracticeTabContent(
+                    dueCount = deckWithStats?.dueCards ?: 0,
+                    onFlashcards = { onNavigateToFlashcards(deckId) },
+                    onSrs = { onNavigateToSrs(deckId) },
+                    onTest = { onNavigateToTestSetup(deckId) },
+                    onMatch = { onNavigateToMatch(deckId) }
+                )
             }
         }
     }
@@ -294,6 +197,7 @@ fun DeckScreen(
     if (showAddCardSheet) {
         AddWordBottomSheet(
             deckId = deckId,
+            subRows = subRows,
             onDismiss = { showAddCardSheet = false },
             onSave = { card ->
                 viewModel.addCard(card)
@@ -317,7 +221,402 @@ fun DeckScreen(
             }
         )
     }
+
+    if (showAddSubRowDialog) {
+        AddSubRowDialog(
+            onDismiss = { showAddSubRowDialog = false },
+            onCreate = { name, colorHex ->
+                viewModel.addSubRow(deckId, name, colorHex)
+                showAddSubRowDialog = false
+            }
+        )
+    }
+
+    managingSubRow?.let { subRow ->
+        SubRowManageSheet(
+            subRow = subRow,
+            onDismiss = { managingSubRow = null },
+            onRename = { newName -> viewModel.updateDeck(subRow.copy(name = newName)); managingSubRow = null },
+            onRecolor = { hex -> viewModel.updateDeck(subRow.copy(colorHex = hex)); managingSubRow = null },
+            onMoveUp = { viewModel.moveSubRow(subRow, -1); managingSubRow = null },
+            onMoveDown = { viewModel.moveSubRow(subRow, +1); managingSubRow = null },
+            onDelete = { viewModel.deleteDeck(subRow); managingSubRow = null }
+        )
+    }
 }
+
+// ─────────────────────────── Words tab ───────────────────────────
+
+@Composable
+private fun WordsTabContent(
+    deckWithStats: DeckWithStats?,
+    filteredCards: List<Card>,
+    activeFilter: CardFilter,
+    onFilterChange: (CardFilter) -> Unit,
+    today: String,
+    onNavigateToForgetting: () -> Unit,
+    onCardLongClick: (Card) -> Unit
+) {
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 8.dp)
+    ) {
+        // Stats row
+        item {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatPill("${deckWithStats?.totalCards ?: 0}", "Всего", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
+                StatPill("${deckWithStats?.newCards ?: 0}", "Новых", FdPrimary, Modifier.weight(1f))
+                StatPill("${deckWithStats?.dueCards ?: 0}", "Учится", FdOrange, Modifier.weight(1f))
+                StatPill(
+                    "${((deckWithStats?.totalCards ?: 0) - (deckWithStats?.newCards ?: 0) - (deckWithStats?.dueCards ?: 0)).coerceAtLeast(0)}",
+                    "Сегодня",
+                    FdRed,
+                    Modifier.weight(1f)
+                )
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
+        }
+
+        // Forgetting edge warning
+        if ((deckWithStats?.dueCards ?: 0) > 0) {
+            item {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(FdOrangeLight)
+                        .border(1.5.dp, FdOrange.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .clickable(onClick = onNavigateToForgetting)
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("⚠️", fontSize = 14.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "${deckWithStats?.dueCards} карточек на грани забывания",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = FdOrangeDark,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("›", fontSize = 16.sp, color = FdOrange)
+                    }
+                }
+            }
+        }
+
+        // Filter chips
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(CardFilter.entries) { filter ->
+                    val label = when (filter) {
+                        CardFilter.ALL -> "Все"
+                        CardFilter.NEW -> "Новые"
+                        CardFilter.LEARNING -> "Изучаются"
+                        CardFilter.DUE -> "Повторение"
+                    }
+                    val isActive = activeFilter == filter
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(if (isActive) FdPrimary else MaterialTheme.colorScheme.surface)
+                            .border(1.5.dp, if (isActive) FdPrimaryDark else MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { onFilterChange(filter) }
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            label,
+                            fontFamily = OutfitFamily,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 12.sp,
+                            color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+
+        // Card list
+        if (filteredCards.isEmpty()) {
+            item {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Нет карточек", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                }
+            }
+        } else {
+            items(filteredCards, key = { it.id }) { card ->
+                CardListItem(
+                    card = card,
+                    todayDate = today,
+                    onLongClick = { onCardLongClick(card) }
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────── Practice tab ───────────────────────────
+
+@Composable
+private fun PracticeTabContent(
+    dueCount: Int,
+    onFlashcards: () -> Unit,
+    onSrs: () -> Unit,
+    onTest: () -> Unit,
+    onMatch: () -> Unit
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            "Свободная практика",
+            fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            "Отдельные упражнения вне пути юнитов",
+            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StudyModeBtn(
+                label = "Карточки", emoji = "🃏",
+                color = FdGreen, shadowColor = FdGreenDark,
+                modifier = Modifier.weight(1f),
+                onClick = onFlashcards
+            )
+            Box(Modifier.weight(1f)) {
+                StudyModeBtn(
+                    label = "Учить SRS", emoji = "🔄",
+                    color = FdPrimary, shadowColor = FdPrimaryDark,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onSrs
+                )
+                if (dueCount > 0) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 4.dp, y = (-4).dp)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(FdRed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "$dueCount",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StudyModeBtn(
+                label = "Тест", emoji = "✏️",
+                color = FdOrange, shadowColor = FdOrangeDark,
+                modifier = Modifier.weight(1f),
+                onClick = onTest
+            )
+            StudyModeBtn(
+                label = "Match", emoji = "🎯",
+                color = FdPurple, shadowColor = FdPurpleDark,
+                modifier = Modifier.weight(1f),
+                onClick = onMatch
+            )
+        }
+    }
+}
+
+// ─────────────────────────── SubRow dialogs ───────────────────────────
+
+@Composable
+private fun AddSubRowDialog(
+    onDismiss: () -> Unit,
+    onCreate: (name: String, colorHex: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(subRowColors.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                "Новая тема",
+                fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp
+            )
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = { Text("Название темы") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(14.dp))
+                ColorPickerRow(selected = selectedColor, onSelect = { selectedColor = it })
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedColor) },
+                enabled = name.isNotBlank()
+            ) { Text("Создать", fontWeight = FontWeight.Bold, color = FdPrimary) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SubRowManageSheet(
+    subRow: Deck,
+    onDismiss: () -> Unit,
+    onRename: (String) -> Unit,
+    onRecolor: (String) -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var name by remember { mutableStateOf(subRow.name) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                "Тема «${subRow.name}»",
+                fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Название") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(14.dp))
+            ColorPickerRow(selected = subRow.colorHex, onSelect = onRecolor)
+            Spacer(Modifier.height(18.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PressButton(
+                    onClick = onMoveUp,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shadowColor = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("↑ Выше", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface) }
+                PressButton(
+                    onClick = onMoveDown,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shadowColor = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("↓ Ниже", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface) }
+            }
+            Spacer(Modifier.height(10.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PressButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.weight(1f).height(46.dp),
+                    color = FdRed.copy(alpha = 0.12f),
+                    shadowColor = FdRed.copy(alpha = 0.35f),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Удалить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = FdRed) }
+                PressButton(
+                    onClick = { if (name.isNotBlank()) onRename(name.trim()) },
+                    modifier = Modifier.weight(1f).height(46.dp),
+                    color = FdPrimary, shadowColor = FdPrimaryDark,
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Сохранить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White) }
+            }
+        }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Удалить тему?", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold) },
+            text = { Text("Все слова темы «${subRow.name}» будут удалены безвозвратно.") },
+            confirmButton = {
+                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
+                    Text("Удалить", fontWeight = FontWeight.Bold, color = FdRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ColorPickerRow(selected: String, onSelect: (String) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        subRowColors.forEach { hex ->
+            val color = remember(hex) {
+                try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { FdPrimary }
+            }
+            val isSelected = hex.equals(selected, ignoreCase = true)
+            Box(
+                Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(color)
+                    .border(
+                        width = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                        shape = CircleShape
+                    )
+                    .clickable { onSelect(hex) }
+            )
+        }
+    }
+}
+
+// ─────────────────────────── Shared pieces ───────────────────────────
 
 @Composable
 private fun StatPill(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
@@ -332,22 +631,21 @@ private fun StudyModeBtn(
     label: String, emoji: String, color: Color, shadowColor: Color,
     modifier: Modifier = Modifier, onClick: () -> Unit
 ) {
-    uz.nodirbek.flashcardsapp.ui.components.PressButton(
+    PressButton(
         onClick = onClick,
-        modifier = modifier.height(52.dp),
+        modifier = modifier.height(58.dp),
         color = color,
         shadowColor = shadowColor,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         shadowDp = 4.dp
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 4.dp)
         ) {
-            Text(emoji, fontSize = 16.sp)
-            Spacer(Modifier.width(6.dp))
-            Text(label, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+            Text(emoji, fontSize = 20.sp)
+            Text(label, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
         }
     }
 }
@@ -383,22 +681,5 @@ private fun CardListItem(card: Card, todayDate: String, onLongClick: () -> Unit 
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun CardRowPreview() {
-    FlashCardsAppTheme {
-        val testCard = Card(
-            id = "1",
-            deckId = "deck1",
-            front = "Hello",
-            back = "Привет",
-            dueDate = "2026-07-20",
-            createdAt = System.currentTimeMillis(),
-            reps = 0
-        )
-//        CardRow(card = testCard, todayDate = "2026-07-23", onLongClick = {})
     }
 }

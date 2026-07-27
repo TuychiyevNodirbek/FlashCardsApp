@@ -29,6 +29,7 @@ class PreferencesDataStore(private val context: Context) {
         private val DAILY_REVIEW_LIMIT_KEY = intPreferencesKey("daily_review_limit")
         private val TTS_LANG_KEY = stringPreferencesKey("tts_lang") // "en" | "en-gb" | "ru" | "de"
         private val TTS_SPEED_KEY = floatPreferencesKey("tts_speed")
+        private val ONBOARDING_SEEN_KEY = booleanPreferencesKey("onboarding_seen")
     }
 
     val streak: Flow<Int> = context.dataStore.data.map { it[STREAK_KEY] ?: 0 }
@@ -43,6 +44,7 @@ class PreferencesDataStore(private val context: Context) {
     val dailyReviewLimit: Flow<Int> = context.dataStore.data.map { it[DAILY_REVIEW_LIMIT_KEY] ?: 100 }
     val ttsLang: Flow<String> = context.dataStore.data.map { it[TTS_LANG_KEY] ?: "en" }
     val ttsSpeed: Flow<Float> = context.dataStore.data.map { it[TTS_SPEED_KEY] ?: 1f }
+    val onboardingSeen: Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_SEEN_KEY] ?: false }
 
     suspend fun setStreak(value: Int) {
         context.dataStore.edit { it[STREAK_KEY] = value }
@@ -104,6 +106,10 @@ class PreferencesDataStore(private val context: Context) {
 
     suspend fun setTtsSpeed(value: Float) {
         context.dataStore.edit { it[TTS_SPEED_KEY] = value }
+    }
+
+    suspend fun setOnboardingSeen() {
+        context.dataStore.edit { it[ONBOARDING_SEEN_KEY] = true }
     }
 
     /** Wipes streak, record, XP and activity date; keeps theme and other settings. */

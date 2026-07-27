@@ -18,7 +18,6 @@ sealed class Screen(val route: String) {
         fun createRoute(deckId: String) = "study/srs/$deckId"
         const val ARG = "deckId"
     }
-    object ReviewDone : Screen("study/review-done")
 
     object Flashcards : Screen("study/flashcards/{deckId}") {
         fun createRoute(deckId: String) = "study/flashcards/$deckId"
@@ -29,9 +28,12 @@ sealed class Screen(val route: String) {
         fun createRoute(deckId: String) = "study/test-setup/$deckId"
         const val ARG = "deckId"
     }
-    object Test : Screen("study/test/{deckId}") {
-        fun createRoute(deckId: String) = "study/test/$deckId"
+    object Test : Screen("study/test/{deckId}?count={count}&written={written}") {
+        fun createRoute(deckId: String, count: Int, isWritten: Boolean) =
+            "study/test/$deckId?count=$count&written=$isWritten"
         const val ARG = "deckId"
+        const val ARG_COUNT = "count"
+        const val ARG_WRITTEN = "written"
     }
     object TestResults : Screen("study/test-results")
 
@@ -47,16 +49,20 @@ sealed class Screen(val route: String) {
     }
 
     // ── Unit Flow ─────────────────────────────────────────────────────
-    object UnitList : Screen("units/{deckId}") {
-        fun createRoute(deckId: String) = "units/$deckId"
-        const val ARG = "deckId"
-    }
     object UnitFlow : Screen("unit-flow/{deckId}/{unitIndex}") {
         fun createRoute(deckId: String, unitIndex: Int) = "unit-flow/$deckId/$unitIndex"
         const val ARG_DECK = "deckId"
         const val ARG_UNIT = "unitIndex"
     }
-    object UnitResult : Screen("unit-result")
+    object UnitResult : Screen("unit-result/{deckId}/{unitIndex}/{correct}/{total}/{xp}") {
+        fun createRoute(deckId: String, unitIndex: Int, correct: Int, total: Int, xp: Int = 0) =
+            "unit-result/$deckId/$unitIndex/$correct/$total/$xp"
+        const val ARG_DECK = "deckId"
+        const val ARG_UNIT = "unitIndex"
+        const val ARG_CORRECT = "correct"
+        const val ARG_TOTAL = "total"
+        const val ARG_XP = "xp"
+    }
 
     // ── Misc ──────────────────────────────────────────────────────────
     object Import : Screen("import")
