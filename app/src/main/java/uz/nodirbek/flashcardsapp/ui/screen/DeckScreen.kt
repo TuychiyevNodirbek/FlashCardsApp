@@ -536,7 +536,7 @@ private fun SubRowManageSheet(
             ColorPickerRow(selected = subRow.colorHex, onSelect = onRecolor)
             Spacer(Modifier.height(18.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PressButton(
                     onClick = onMoveUp,
                     modifier = Modifier.weight(1f).height(44.dp),
@@ -554,7 +554,7 @@ private fun SubRowManageSheet(
             }
             Spacer(Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PressButton(
                     onClick = { showDeleteConfirm = true },
                     modifier = Modifier.weight(1f).height(46.dp),

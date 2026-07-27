@@ -267,7 +267,7 @@ fun ImportScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(16.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 PressButton(
                                     onClick = { fdeckPreview = null },
                                     modifier = Modifier.weight(1f).height(44.dp),
@@ -343,9 +343,9 @@ fun ImportScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(10.dp))
-                        FormatRow("Разделитель", "Tab (\\t), точка с запятой (;) или запятая (,)")
+                        FormatRow("Разделитель", "Tab, точка с запятой (;) или запятая (,)")
                         Spacer(Modifier.height(8.dp))
-                        FormatRow("Структура", "лицевая сторона [разделитель] оборотная сторона")
+                        FormatRow("Структура", "термин [разделитель] перевод")
                         Spacer(Modifier.height(12.dp))
                         // Example box
                         Box(
@@ -655,7 +655,7 @@ private fun FormatRow(label: String, value: String) {
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.width(90.dp)
+            modifier = Modifier.width(100.dp)
         )
         Spacer(Modifier.width(8.dp))
         Text(value, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
