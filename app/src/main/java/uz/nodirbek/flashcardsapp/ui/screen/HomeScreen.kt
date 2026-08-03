@@ -48,8 +48,11 @@ import uz.nodirbek.flashcardsapp.data.transfer.DeckShareHelper
 import uz.nodirbek.flashcardsapp.data.transfer.DeckTransferRepository
 import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import kotlin.math.ceil
 import uz.nodirbek.flashcardsapp.ui.components.BannerAction
 import uz.nodirbek.flashcardsapp.ui.components.BannerEmojiBadge
+import uz.nodirbek.flashcardsapp.ui.components.BannerLeadingSize
+import uz.nodirbek.flashcardsapp.ui.components.BannerStyle
 import uz.nodirbek.flashcardsapp.ui.components.HomeBanner
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.components.SnackbarData
@@ -212,7 +215,8 @@ fun HomeScreen(
                         uiState = uiState,
                         reviewedToday = reviewedToday,
                         deckCount = uiState.decks.size,
-                        onStartReview = onNavigateToStudy
+                        onStartReview = onNavigateToStudy,
+                        onOpenImport = onNavigateToImport
                     )
                 )
                 LazyColumn(Modifier.fillMaxSize()) {
@@ -368,7 +372,8 @@ private fun homeBanners(
     uiState: HomeUiState,
     reviewedToday: Int,
     deckCount: Int,
-    onStartReview: () -> Unit
+    onStartReview: () -> Unit,
+    onOpenImport: () -> Unit
 ): List<HomeBanner> {
     val banners = mutableListOf<HomeBanner>()
 
@@ -390,22 +395,27 @@ private fun homeBanners(
         },
         subtitleColor = if (hasWork) null else FdGreen,
         action = if (hasWork) {
-            BannerAction("Начать", FdOrange, FdOrangeDark, onStartReview)
+            BannerAction(
+                label = "Начать",
+                color = FdOrange,
+                shadowColor = FdOrangeDark,
+                onClick = onStartReview
+            )
         } else null,
         leading = {
             Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier.size(46.dp),
+                    modifier = Modifier.size(BannerLeadingSize),
                     color = if (goalMet) FdGreen else FdPrimary,
                     trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                    strokeWidth = 5.dp
+                    strokeWidth = 6.dp
                 )
                 Text(
                     if (goalMet) "✓" else "${(progress * 100).toInt()}%",
                     fontFamily = OutfitFamily,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = if (goalMet) 18.sp else 11.sp,
+                    fontSize = if (goalMet) 22.sp else 14.sp,
                     color = if (goalMet) FdGreen else MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -423,17 +433,52 @@ private fun homeBanners(
             else
                 "Это твой рекорд — не прерывай!",
             subtitleColor = if (uiState.streakRecord > streak) null else FdOrange,
+            action = BannerAction(
+                label = "Продолжить",
+                color = FdOrange,
+                shadowColor = FdOrangeDark,
+                onClick = onStartReview
+            ),
             leading = { BannerEmojiBadge("🔥", FdOrange.copy(alpha = 0.14f)) }
         )
     }
 
-    // ── Уровень ───────────────────────────────────────────────────
-    val xpInLevel = (uiState.xp % 100).toInt()
+    // ── Промо: прокачай уровень ───────────────────────────────────
+    // 100 XP на уровень, 10 XP за верный ответ (HomeViewModel.rateCard),
+    // поэтому «осталось карточек» — честная оценка, а не круглое число.
+    val xpToNextLevel = 100 - (uiState.xp % 100).toInt()
+    val cardsToNextLevel = ceil(xpToNextLevel / 10.0).toInt()
     banners += HomeBanner(
-        id = "level",
-        title = "Уровень ${uiState.level}",
-        subtitle = "${100 - xpInLevel} XP до Lv.${uiState.level + 1} · всего ${uiState.xp} XP",
-        leading = { BannerEmojiBadge("⭐", FdOrange.copy(alpha = 0.14f)) }
+        id = "promo_level",
+        title = "Прокачай уровень ⚡",
+        subtitle = "До Lv.${uiState.level + 1} осталось $xpToNextLevel XP — это примерно " +
+            "$cardsToNextLevel ${plural(cardsToNextLevel, "карточка", "карточки", "карточек")}",
+        style = BannerStyle.Promo(FdPrimary, FdPurple),
+        action = BannerAction(
+            label = "Вперёд",
+            color = Color.White,
+            shadowColor = Color.White.copy(alpha = 0.45f),
+            textColor = FdPrimaryDark,
+            onClick = onStartReview
+        ),
+        leading = { BannerEmojiBadge("⭐", Color.White.copy(alpha = 0.22f)) }
+    )
+
+    // ── Промо: готовые колоды ─────────────────────────────────────
+    banners += HomeBanner(
+        id = "promo_import",
+        title = "Учись легко 📦",
+        subtitle = "Импортируй колоду из Anki, GitHub или CSV — тысячи слов за минуту",
+        style = BannerStyle.Promo(FdOrange, FdRed),
+        action = BannerAction(
+            label = "Открыть",
+            color = Color.White,
+            shadowColor = Color.White.copy(alpha = 0.45f),
+            textColor = FdOrangeDark,
+            onClick = onOpenImport
+        ),
+        onClick = onOpenImport,
+        leading = { BannerEmojiBadge("🚀", Color.White.copy(alpha = 0.22f)) }
     )
 
     // ── Коллекция ─────────────────────────────────────────────────
@@ -443,6 +488,12 @@ private fun homeBanners(
             title = "Коллекция",
             subtitle = "$deckCount ${plural(deckCount, "колода", "колоды", "колод")} · " +
                 "${uiState.cardCount} ${plural(uiState.cardCount, "карта", "карты", "карт")}",
+            action = BannerAction(
+                label = "Добавить",
+                color = FdPrimary,
+                shadowColor = FdPrimaryDark,
+                onClick = onOpenImport
+            ),
             leading = { BannerEmojiBadge("📚", FdPrimary.copy(alpha = 0.14f)) }
         )
     }
