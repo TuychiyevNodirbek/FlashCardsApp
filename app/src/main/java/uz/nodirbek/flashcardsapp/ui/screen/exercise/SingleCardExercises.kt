@@ -28,6 +28,123 @@ import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 
+// ── Single-card Listen ───────────────────────────────────────────────────────
+
+@Composable
+fun SingleCardListen(
+    card: Card,
+    allCards: List<Card>,
+    modifier: Modifier = Modifier,
+    onSpeak: (String) -> Unit,
+    onResult: (Boolean) -> Unit,
+    onCantListen: () -> Unit
+) {
+    val options = remember(card.id) {
+        val distractors = allCards
+            .filter { it.id != card.id }
+            .map { it.back }
+            .shuffled()
+            .take(3)
+        (distractors + card.back).shuffled()
+    }
+    var selected by remember { mutableStateOf<String?>(null) }
+    var revealed by remember { mutableStateOf(false) }
+
+    // Auto-play on first appear
+    LaunchedEffect(card.id) { onSpeak(card.front) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "🎧 Прослушайте и выберите перевод",
+            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(20.dp))
+
+        // Big replay button
+        Box(
+            Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(FdPrimaryLight)
+                .border(2.dp, FdPrimary.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                .clickable { onSpeak(card.front) },
+            contentAlignment = Alignment.Center
+        ) {
+            Text("🔊", fontSize = 44.sp)
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        options.forEach { option ->
+            val isSelected = selected == option
+            val isCorrect = option == card.back
+            val bgColor = when {
+                !revealed -> if (isSelected) FdPrimaryLight else MaterialTheme.colorScheme.surface
+                isCorrect -> FdGreenLight
+                isSelected -> FdRedLight
+                else -> MaterialTheme.colorScheme.surface
+            }
+            val borderColor = when {
+                !revealed -> if (isSelected) FdPrimary else MaterialTheme.colorScheme.outline
+                isCorrect -> FdGreen
+                isSelected -> FdRed
+                else -> MaterialTheme.colorScheme.outline
+            }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(bgColor)
+                    .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+                    .clickable(enabled = !revealed) {
+                        selected = option
+                        revealed = true
+                    }
+                    .padding(16.dp)
+            ) {
+                Text(
+                    option,
+                    fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        if (revealed) {
+            PressButton(
+                onClick = { onResult(selected == card.back) },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                color = FdPrimary, shadowColor = FdPrimaryDark, shape = RoundedCornerShape(14.dp)
+            ) {
+                Text("Далее →", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+            }
+        } else {
+            Text(
+                "Не могу слушать сейчас",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = OutfitFamily,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clickable { onCantListen() }
+                    .padding(vertical = 8.dp)
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
 // ── Single-card Multi-Choice ─────────────────────────────────────────────────
 
 @Composable

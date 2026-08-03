@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -27,9 +28,10 @@ class PreferencesDataStore(private val context: Context) {
         private val DAILY_GOAL_KEY = intPreferencesKey("daily_goal")
         private val DAILY_NEW_LIMIT_KEY = intPreferencesKey("daily_new_limit")
         private val DAILY_REVIEW_LIMIT_KEY = intPreferencesKey("daily_review_limit")
-        private val TTS_LANG_KEY = stringPreferencesKey("tts_lang") // "en" | "en-gb" | "ru" | "de"
+        private val TTS_LANG_KEY = stringPreferencesKey("tts_lang") // "en" | "en-gb" | "ru" | "de" | "es" | "fr" | "it" | "pt" | "zh" | "ja" | "ko" | "ar" | "tr" | "la"
         private val TTS_SPEED_KEY = floatPreferencesKey("tts_speed")
         private val ONBOARDING_SEEN_KEY = booleanPreferencesKey("onboarding_seen")
+        private val UNLOCKED_ACHIEVEMENTS_KEY = stringSetPreferencesKey("unlocked_achievements")
     }
 
     val streak: Flow<Int> = context.dataStore.data.map { it[STREAK_KEY] ?: 0 }
@@ -45,6 +47,7 @@ class PreferencesDataStore(private val context: Context) {
     val ttsLang: Flow<String> = context.dataStore.data.map { it[TTS_LANG_KEY] ?: "en" }
     val ttsSpeed: Flow<Float> = context.dataStore.data.map { it[TTS_SPEED_KEY] ?: 1f }
     val onboardingSeen: Flow<Boolean> = context.dataStore.data.map { it[ONBOARDING_SEEN_KEY] ?: false }
+    val unlockedAchievements: Flow<Set<String>> = context.dataStore.data.map { it[UNLOCKED_ACHIEVEMENTS_KEY] ?: emptySet() }
 
     suspend fun setStreak(value: Int) {
         context.dataStore.edit { it[STREAK_KEY] = value }
@@ -110,6 +113,13 @@ class PreferencesDataStore(private val context: Context) {
 
     suspend fun setOnboardingSeen() {
         context.dataStore.edit { it[ONBOARDING_SEEN_KEY] = true }
+    }
+
+    suspend fun unlockAchievement(id: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[UNLOCKED_ACHIEVEMENTS_KEY] ?: emptySet()
+            prefs[UNLOCKED_ACHIEVEMENTS_KEY] = current + id
+        }
     }
 
     /** Wipes streak, record, XP and activity date; keeps theme and other settings. */

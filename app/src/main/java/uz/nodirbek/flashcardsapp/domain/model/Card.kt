@@ -10,5 +10,9 @@ data class Card(
     val interval: Int = 0,
     val dueDate: String,
     val lastReviewed: String? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    val lapses: Int = 0
 )
+
+fun Card.isNew() = lastReviewed == null
+fun Card.isDueReview(today: String) = lastReviewed != null && dueDate <= today

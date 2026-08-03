@@ -44,6 +44,8 @@ class CardRepository(private val cardDao: CardDao) {
     suspend fun deleteAllCards() = cardDao.deleteAllCards()
 
     suspend fun deleteCardsByDeck(deckId: String) = cardDao.deleteCardsByDeck(deckId)
+
+    suspend fun deleteOrphanedCards() = cardDao.deleteOrphanedCards()
 }
 
 private fun CardEntity.toDomainModel(): Card = Card(
@@ -56,7 +58,8 @@ private fun CardEntity.toDomainModel(): Card = Card(
     interval = interval,
     dueDate = dueDate,
     lastReviewed = lastReviewed,
-    createdAt = createdAt
+    createdAt = createdAt,
+    lapses = lapses
 )
 
 private fun Card.toEntity(): CardEntity = CardEntity(
@@ -69,5 +72,6 @@ private fun Card.toEntity(): CardEntity = CardEntity(
     interval = interval,
     dueDate = dueDate,
     lastReviewed = lastReviewed,
-    createdAt = createdAt
+    createdAt = createdAt,
+    lapses = lapses
 )

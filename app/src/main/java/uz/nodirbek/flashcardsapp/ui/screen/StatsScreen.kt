@@ -55,6 +55,28 @@ fun StatsScreen(viewModel: HomeViewModel) {
     val learnedCount = uiState.cards.count { it.reps > 0 && it.interval >= 7 }
     val inProgressCount = uiState.cards.count { it.reps > 0 && it.interval < 7 }
 
+    // Retention trend: last 7 days vs previous 7 days
+    val retentionData = remember(allStats) {
+        val last7 = fillDays(allStats, 7)
+        val prev7 = run {
+            val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            val map = allStats.associateBy { it.date }
+            val today = LocalDate.now()
+            (13 downTo 7).map { offset ->
+                val date = today.minusDays(offset.toLong()).format(fmt)
+                map[date] ?: DailyStats(date = date, reviewCount = 0, correctCount = 0)
+            }
+        }
+        val l7Rev = last7.sumOf { it.reviewCount }
+        val l7Cor = last7.sumOf { it.correctCount }
+        val p7Rev = prev7.sumOf { it.reviewCount }
+        val p7Cor = prev7.sumOf { it.correctCount }
+        val last7Pct = if (l7Rev > 0) l7Cor * 100 / l7Rev else -1
+        val prev7Pct = if (p7Rev > 0) p7Cor * 100 / p7Rev else -1
+        Triple(last7Pct, prev7Pct, l7Rev)
+    }
+    val (last7Retention, prev7Retention, last7Reviewed) = retentionData
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -266,10 +288,88 @@ fun StatsScreen(viewModel: HomeViewModel) {
                     MiniStatTile("$inProgressCount", "в работе", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                     MiniStatTile("$accuracy%", "точность", FdGreen, Modifier.weight(1f))
                 }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // Retention trend tile
+            item {
+                val trendText: String
+                val trendColor: Color
+                val retentionLabel: String
+                when {
+                    last7Reviewed == 0 -> {
+                        retentionLabel = "—"
+                        trendText = "нет данных за 7 дней"
+                        trendColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    last7Retention < 0 -> {
+                        retentionLabel = "—"
+                        trendText = "нет данных"
+                        trendColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    prev7Retention < 0 -> {
+                        retentionLabel = "$last7Retention%"
+                        trendText = "первые данные"
+                        trendColor = FdPrimary
+                    }
+                    last7Retention > prev7Retention -> {
+                        retentionLabel = "$last7Retention%"
+                        trendText = "↑ +${last7Retention - prev7Retention}% vs прошлой неделе"
+                        trendColor = FdGreen
+                    }
+                    last7Retention < prev7Retention -> {
+                        retentionLabel = "$last7Retention%"
+                        trendText = "↓ ${last7Retention - prev7Retention}% vs прошлой неделе"
+                        trendColor = FdRed
+                    }
+                    else -> {
+                        retentionLabel = "$last7Retention%"
+                        trendText = "→ без изменений"
+                        trendColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                }
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🧠", fontSize = 24.sp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "УДЕРЖАНИЕ (7 дн.)",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            trendText,
+                            fontSize = 12.sp,
+                            color = trendColor,
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Text(
+                        retentionLabel,
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 26.sp,
+                        color = trendColor
+                    )
+                }
                 Spacer(Modifier.height(14.dp))
             }
 
-            // Year heatmap
+            // Activity heatmap
             item {
                 Column(
                     Modifier

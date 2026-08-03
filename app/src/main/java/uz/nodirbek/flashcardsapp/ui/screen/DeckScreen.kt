@@ -1,5 +1,7 @@
 package uz.nodirbek.flashcardsapp.ui.screen
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,17 +22,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.data.transfer.CardParseResult
+import uz.nodirbek.flashcardsapp.data.transfer.parseCardsFromUri
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.components.HtmlText
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
+import uz.nodirbek.flashcardsapp.ui.components.SnackbarData
+import uz.nodirbek.flashcardsapp.ui.components.TopSnackbar
+import uz.nodirbek.flashcardsapp.ui.components.rememberSnackbarState
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
+import androidx.core.graphics.toColorInt
 
 private enum class CardFilter { ALL, NEW, LEARNING, DUE }
 private enum class DeckTab(val label: String) { PATH("Путь"), WORDS("Слова"), PRACTICE("Практика") }
@@ -60,7 +71,6 @@ fun DeckScreen(
                 ?: list.flatMap { it.children }.let { if (it.isEmpty()) null else findDeck(it) }
         findDeck(uiState.decks)
     }
-    // Карточки курса вместе с темами-потомками
     val descendantIds = remember(uiState.decks, deckId) { viewModel.getDeckWithDescendantIds(deckId) }
     val deckCards = remember(uiState.cards, descendantIds) {
         uiState.cards.filter { it.deckId in descendantIds }
@@ -73,6 +83,27 @@ fun DeckScreen(
     var editingCard by remember { mutableStateOf<Card?>(null) }
     var showAddSubRowDialog by remember { mutableStateOf(false) }
     var managingSubRow by remember { mutableStateOf<Deck?>(null) }
+    var pendingImportSubRowId by remember { mutableStateOf<String?>(null) }
+    val snackbar = rememberSnackbarState()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val subRowImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val targetId = pendingImportSubRowId ?: return@rememberLauncherForActivityResult
+        pendingImportSubRowId = null
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            when (val result = parseCardsFromUri(uri, context, targetId)) {
+                is CardParseResult.Success -> {
+                    viewModel.addCards(result.cards)
+                    snackbar.show(SnackbarData("Импортировано ${result.cards.size} карточек", icon = "✅", color = FdGreen))
+                }
+                is CardParseResult.Error -> {
+                    snackbar.show(SnackbarData(result.message, icon = "⚠️", color = FdRed))
+                }
+            }
+        }
+    }
 
     val today = RateCardUseCase.getTodayDate()
     val filteredCards = remember(deckCards, activeFilter, today) {
@@ -85,10 +116,11 @@ fun DeckScreen(
     }
 
     val indicatorColor = remember(deckWithStats) {
-        try { Color(android.graphics.Color.parseColor(deckWithStats?.deck?.colorHex ?: "#4255FF")) }
+        try { Color((deckWithStats?.deck?.colorHex ?: "#4255FF").toColorInt()) }
         catch (e: Exception) { FdPrimary }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -190,6 +222,7 @@ fun DeckScreen(
                     onTest = { onNavigateToTestSetup(deckId) },
                     onMatch = { onNavigateToMatch(deckId) }
                 )
+
             }
         }
     }
@@ -202,8 +235,17 @@ fun DeckScreen(
             onSave = { card ->
                 viewModel.addCard(card)
                 showAddCardSheet = false
+                scope.launch { snackbar.show(SnackbarData("Карточка добавлена", icon = "✅", color = FdGreen)) }
             },
-            onSaveAndNext = { card -> viewModel.addCard(card) }
+            onSaveAndNext = { card ->
+                viewModel.addCard(card)
+                scope.launch { snackbar.show(SnackbarData("Карточка добавлена", icon = "✅", color = FdGreen)) }
+            },
+            onSaveMultiple = { cards ->
+                viewModel.addCards(cards)
+                showAddCardSheet = false
+                scope.launch { snackbar.show(SnackbarData("Импортировано ${cards.size} карточек", icon = "✅", color = FdGreen)) }
+            }
         )
     }
 
@@ -218,6 +260,7 @@ fun DeckScreen(
             onDelete = { toDelete ->
                 viewModel.deleteCard(toDelete)
                 editingCard = null
+                scope.launch { snackbar.show(SnackbarData("Карточка удалена", icon = "🗑️", color = FdRed)) }
             }
         )
     }
@@ -228,6 +271,13 @@ fun DeckScreen(
             onCreate = { name, colorHex ->
                 viewModel.addSubRow(deckId, name, colorHex)
                 showAddSubRowDialog = false
+            },
+            onCreateAndImport = { name, colorHex ->
+                val newId = java.util.UUID.randomUUID().toString()
+                viewModel.addSubRowWithId(newId, deckId, name, colorHex)
+                showAddSubRowDialog = false
+                pendingImportSubRowId = newId
+                subRowImportLauncher.launch("*/*")
             }
         )
     }
@@ -240,9 +290,17 @@ fun DeckScreen(
             onRecolor = { hex -> viewModel.updateDeck(subRow.copy(colorHex = hex)); managingSubRow = null },
             onMoveUp = { viewModel.moveSubRow(subRow, -1); managingSubRow = null },
             onMoveDown = { viewModel.moveSubRow(subRow, +1); managingSubRow = null },
-            onDelete = { viewModel.deleteDeck(subRow); managingSubRow = null }
+            onDelete = {
+                val name = subRow.name
+                viewModel.deleteDeck(subRow)
+                managingSubRow = null
+                scope.launch { snackbar.show(SnackbarData("«$name» удалена", icon = "🗑️", color = FdRed)) }
+            }
         )
     }
+
+    TopSnackbar(data = snackbar.data)
+    } // end outer Box
 }
 
 // ─────────────────────────── Words tab ───────────────────────────
@@ -272,11 +330,11 @@ private fun WordsTabContent(
             ) {
                 StatPill("${deckWithStats?.totalCards ?: 0}", "Всего", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
                 StatPill("${deckWithStats?.newCards ?: 0}", "Новых", FdPrimary, Modifier.weight(1f))
-                StatPill("${deckWithStats?.dueCards ?: 0}", "Учится", FdOrange, Modifier.weight(1f))
+                StatPill("${deckWithStats?.dueCards ?: 0}", "На повтор", FdOrange, Modifier.weight(1f))
                 StatPill(
                     "${((deckWithStats?.totalCards ?: 0) - (deckWithStats?.newCards ?: 0) - (deckWithStats?.dueCards ?: 0)).coerceAtLeast(0)}",
-                    "Сегодня",
-                    FdRed,
+                    "Изучено",
+                    FdGreen,
                     Modifier.weight(1f)
                 )
             }
@@ -453,7 +511,8 @@ private fun PracticeTabContent(
 @Composable
 private fun AddSubRowDialog(
     onDismiss: () -> Unit,
-    onCreate: (name: String, colorHex: String) -> Unit
+    onCreate: (name: String, colorHex: String) -> Unit,
+    onCreateAndImport: ((name: String, colorHex: String) -> Unit)? = null
 ) {
     var name by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(subRowColors.first()) }
@@ -478,6 +537,29 @@ private fun AddSubRowDialog(
                 )
                 Spacer(Modifier.height(14.dp))
                 ColorPickerRow(selected = selectedColor, onSelect = { selectedColor = it })
+                if (onCreateAndImport != null) {
+                    Spacer(Modifier.height(14.dp))
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(FdPrimaryLight)
+                            .border(1.dp, FdPrimary.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                            .clickable(enabled = name.isNotBlank()) {
+                                if (name.isNotBlank()) onCreateAndImport(name.trim(), selectedColor)
+                            }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "📂 Создать и добавить из файла",
+                            fontFamily = OutfitFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = if (name.isNotBlank()) FdPrimary else FdPrimary.copy(alpha = 0.4f)
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -665,8 +747,8 @@ private fun CardListItem(card: Card, todayDate: String, onLongClick: () -> Unit 
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
-                Text(card.back, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+                HtmlText(card.front, fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                HtmlText(card.back, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
             }
             Spacer(Modifier.width(8.dp))
             val badgeColor = when { isNew -> FdPrimary; isDue -> FdOrange; else -> FdGreen }

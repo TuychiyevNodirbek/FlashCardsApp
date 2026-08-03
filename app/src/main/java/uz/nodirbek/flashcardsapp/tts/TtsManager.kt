@@ -29,6 +29,16 @@ class TtsManager(context: Context) {
         "en-gb" -> Locale.UK
         "ru" -> Locale("ru", "RU")
         "de" -> Locale.GERMANY
+        "es" -> Locale("es", "ES")
+        "fr" -> Locale.FRANCE
+        "it" -> Locale.ITALY
+        "pt" -> Locale("pt", "PT")
+        "zh" -> Locale.SIMPLIFIED_CHINESE
+        "ja" -> Locale.JAPAN
+        "ko" -> Locale.KOREA
+        "ar" -> Locale("ar", "SA")
+        "tr" -> Locale("tr", "TR")
+        "la" -> Locale("la", "VA")
         else -> Locale.US
     }
 }

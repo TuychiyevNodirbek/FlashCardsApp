@@ -27,7 +27,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 import uz.nodirbek.flashcardsapp.notification.NotificationScheduler
+import uz.nodirbek.flashcardsapp.ui.components.SnackbarData
+import uz.nodirbek.flashcardsapp.ui.components.TopSnackbar
+import uz.nodirbek.flashcardsapp.ui.components.rememberSnackbarState
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
@@ -36,7 +40,17 @@ private val TTS_LANGS = listOf(
     "en" to "English (US)",
     "en-gb" to "English (UK)",
     "ru" to "Русский",
-    "de" to "Deutsch"
+    "de" to "Deutsch",
+    "es" to "Espanol",
+    "fr" to "Francais",
+    "it" to "Italiano",
+    "pt" to "Portugues",
+    "zh" to "Zhongwen",
+    "ja" to "Nihongo",
+    "ko" to "Hangugeo",
+    "ar" to "Al-Arabiyya",
+    "tr" to "Turkce",
+    "la" to "Latina"
 )
 
 @Composable
@@ -49,6 +63,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     val notificationScheduler = remember { NotificationScheduler(context) }
     var showResetConfirm by remember { mutableStateOf(false) }
+    val snackbar = rememberSnackbarState()
+    val scope = rememberCoroutineScope()
 
     fun hasNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
@@ -63,6 +79,7 @@ fun SettingsScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -304,6 +321,7 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     viewModel.resetProgress()
                     showResetConfirm = false
+                    scope.launch { snackbar.show(SnackbarData("Прогресс сброшен", icon = "🔄", color = FdPrimary)) }
                 }) { Text("Сбросить", color = FdRed, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -311,6 +329,9 @@ fun SettingsScreen(
             }
         )
     }
+
+    TopSnackbar(data = snackbar.data)
+    } // end outer Box
 }
 
 @Composable

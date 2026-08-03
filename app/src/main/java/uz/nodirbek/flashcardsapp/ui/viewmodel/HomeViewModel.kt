@@ -2,8 +2,11 @@ package uz.nodirbek.flashcardsapp.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -13,11 +16,16 @@ import uz.nodirbek.flashcardsapp.data.local.preferences.PreferencesDataStore
 import uz.nodirbek.flashcardsapp.data.repository.CardRepository
 import uz.nodirbek.flashcardsapp.data.repository.DeckRepository
 import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
+import uz.nodirbek.flashcardsapp.domain.model.Achievement
+import uz.nodirbek.flashcardsapp.domain.model.Achievements
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.model.Deck
+import uz.nodirbek.flashcardsapp.domain.model.isDueReview
+import uz.nodirbek.flashcardsapp.domain.model.isNew
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.state.HomeUiState
+import java.time.LocalTime
 
 class HomeViewModel(
     private val cardRepository: CardRepository,
@@ -30,16 +38,27 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    // Fires when a card earns double XP (1/15 chance on correct answer)
+    private val _doubleXpEvent = MutableSharedFlow<Unit>(replay = 0)
+    val doubleXpEvent: SharedFlow<Unit> = _doubleXpEvent.asSharedFlow()
+
+    // Fires when a new achievement is unlocked
+    private val _achievementEvent = MutableSharedFlow<Achievement>(replay = 0)
+    val achievementEvent: SharedFlow<Achievement> = _achievementEvent.asSharedFlow()
+
     init {
         loadData()
     }
 
     private fun loadData() {
+        viewModelScope.launch { cardRepository.deleteOrphanedCards() }
         viewModelScope.launch {
             cardRepository.getAllCards().collect { cards ->
                 val today = RateCardUseCase.getTodayDate()
                 val dueCards = cards.filter { it.dueDate <= today }
-                _uiState.update { it.copy(cards = cards, dueCards = dueCards, cardCount = cards.size, isLoading = false) }
+                val rawNewCount = cards.count { it.isNew() }
+                val rawReviewCount = cards.count { it.isDueReview(today) }
+                _uiState.update { it.copy(cards = cards, dueCards = dueCards, cardCount = cards.size, isLoading = false, rawNewCount = rawNewCount, rawReviewCount = rawReviewCount) }
             }
         }
         viewModelScope.launch {
@@ -65,6 +84,7 @@ class HomeViewModel(
         viewModelScope.launch { preferencesDataStore.dailyReviewLimit.collect { v -> _uiState.update { it.copy(dailyReviewLimit = v) } } }
         viewModelScope.launch { preferencesDataStore.ttsLang.collect { v -> _uiState.update { it.copy(ttsLang = v) } } }
         viewModelScope.launch { preferencesDataStore.ttsSpeed.collect { v -> _uiState.update { it.copy(ttsSpeed = v) } } }
+        viewModelScope.launch { preferencesDataStore.unlockedAchievements.collect { a -> _uiState.update { it.copy(unlockedAchievements = a) } } }
     }
 
     private fun buildDeckTree(decks: List<Deck>, cards: List<Card>): List<DeckWithStats> {
@@ -76,8 +96,8 @@ class HomeViewModel(
             return DeckWithStats(
                 deck = deck,
                 totalCards = deckCards.size + children.sumOf { it.totalCards },
-                newCards = deckCards.count { it.reps == 0 } + children.sumOf { it.newCards },
-                dueCards = deckCards.count { it.dueDate <= today } + children.sumOf { it.dueCards },
+                newCards = deckCards.count { it.isNew() } + children.sumOf { it.newCards },
+                dueCards = deckCards.count { it.isDueReview(today) } + children.sumOf { it.dueCards },
                 children = children
             )
         }
@@ -105,13 +125,54 @@ class HomeViewModel(
                 val updatedCard = rateCardUseCase(card, quality)
                 cardRepository.updateCard(updatedCard)
                 val isCorrect = quality >= 2
-                preferencesDataStore.addXp(if (isCorrect) 10L else 4L)
+                val isDoubleXp = isCorrect && (0 until 15).random() == 0
+                preferencesDataStore.addXp(if (isCorrect) (if (isDoubleXp) 20L else 10L) else 4L)
+                if (isDoubleXp) _doubleXpEvent.emit(Unit)
                 statsRepository.recordReview(date = today, reviews = 1, correct = if (isCorrect) 1 else 0)
                 updateStreak()
+                checkAchievements(updatedCard)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
         }
+    }
+
+    /** Called after a session completes — checks time-based and session achievements. */
+    fun onSessionCompleted(reviewed: Int, accuracy: Float) {
+        viewModelScope.launch {
+            val unlocked = _uiState.value.unlockedAchievements
+            val now = LocalTime.now()
+            if ("early_bird" !in unlocked && now.hour < 8) unlock("early_bird")
+            if ("night_owl" !in unlocked && now.hour >= 22) unlock("night_owl")
+            if ("perfect_session" !in unlocked && reviewed >= 10 && accuracy >= 1f) unlock("perfect_session")
+        }
+    }
+
+    private suspend fun checkAchievements(updatedCard: Card) {
+        val state = _uiState.value
+        val unlocked = state.unlockedAchievements
+        val totalReviewed = state.allStats.sumOf { it.reviewCount }
+
+        if ("streak_7" !in unlocked && state.streak >= 7) unlock("streak_7")
+        if ("streak_30" !in unlocked && state.streak >= 30) unlock("streak_30")
+        if ("cards_100" !in unlocked && totalReviewed >= 100) unlock("cards_100")
+        if ("cards_1000" !in unlocked && totalReviewed >= 1000) unlock("cards_1000")
+
+        // Lapse recover: card that had ≥3 lapses just reached interval ≥7
+        if ("lapse_recover" !in unlocked && updatedCard.lapses >= 3 && updatedCard.interval >= 7) {
+            unlock("lapse_recover")
+        }
+
+        // Deck master: all cards in updatedCard's deck have interval ≥21
+        if ("deck_master" !in unlocked) {
+            val deckCards = state.cards.filter { it.deckId == updatedCard.deckId }
+            if (deckCards.isNotEmpty() && deckCards.all { it.interval >= 21 }) unlock("deck_master")
+        }
+    }
+
+    private suspend fun unlock(id: String) {
+        preferencesDataStore.unlockAchievement(id)
+        Achievements.findById(id)?.let { _achievementEvent.emit(it) }
     }
 
     private suspend fun updateStreak() {
@@ -138,12 +199,32 @@ class HomeViewModel(
         }
     }
 
-    fun deleteDeck(deck: Deck) {
+    fun addDeckWithId(id: String, name: String, parentId: String? = null, colorHex: String = "#4255FF") {
         viewModelScope.launch {
-            deckRepository.deleteDeck(deck)
-            cardRepository.deleteCardsByDeck(deck.id)
+            deckRepository.insertDeck(Deck(id = id, name = name, parentId = parentId, colorHex = colorHex))
         }
     }
+
+    fun deleteDeck(deck: Deck) {
+        viewModelScope.launch {
+            // Collect all descendant deck IDs before deleting anything
+            val allIds = getDeckWithDescendantIds(deck.id)
+            allIds.forEach { id ->
+                cardRepository.deleteCardsByDeck(id)
+                if (id == deck.id) {
+                    deckRepository.deleteDeck(deck)
+                } else {
+                    val childDeck = _uiState.value.decks
+                        .flatMap { listOf(it) + collectAll(it.children) }
+                        .firstOrNull { it.deck.id == id }?.deck
+                    if (childDeck != null) deckRepository.deleteDeck(childDeck)
+                }
+            }
+        }
+    }
+
+    private fun collectAll(list: List<DeckWithStats>): List<DeckWithStats> =
+        list.flatMap { listOf(it) + collectAll(it.children) }
 
     fun updateDeck(deck: Deck) {
         viewModelScope.launch { deckRepository.updateDeck(deck) }
@@ -162,6 +243,17 @@ class HomeViewModel(
                     colorHex = colorHex,
                     sortOrder = nextOrder
                 )
+            )
+        }
+    }
+
+    /** Создать subRow с известным ID (для немедленной ссылки, например при импорте файла). */
+    fun addSubRowWithId(id: String, courseDeckId: String, name: String, colorHex: String = "#4255FF") {
+        viewModelScope.launch {
+            val siblings = deckRepository.getChildDecks(courseDeckId).first()
+            val nextOrder = (siblings.maxOfOrNull { it.sortOrder } ?: -1) + 1
+            deckRepository.insertDeck(
+                Deck(id = id, name = name, parentId = courseDeckId, colorHex = colorHex, sortOrder = nextOrder)
             )
         }
     }
@@ -229,15 +321,33 @@ class HomeViewModel(
         viewModelScope.launch { cardRepository.deleteCard(card) }
     }
 
-    /** Due queue for a deck (включая темы-потомки), capped by the daily limits from Settings. */
+    /** Due queue for a deck (включая темы-потомки), capped by the daily limits from Settings.
+     *  Review cards sorted by dueDate ascending (most overdue = highest urgency first). */
     fun getDueCardsForDeck(deckId: String): List<Card> {
         val today = RateCardUseCase.getTodayDate()
         val state = _uiState.value
+        val knownDeckIds = mutableSetOf<String>()
+        fun collectKnown(list: List<DeckWithStats>) { list.forEach { knownDeckIds += it.deck.id; collectKnown(it.children) } }
+        collectKnown(state.decks)
         val ids = if (deckId == ALL_DECKS) null else getDeckWithDescendantIds(deckId)
-        val due = state.cards.filter { (ids == null || it.deckId in ids) && it.dueDate <= today }
-        val newCards = due.filter { it.reps == 0 }.take(state.dailyNewLimit)
-        val reviewCards = due.filter { it.reps > 0 }.take(state.dailyReviewLimit)
+        val due = state.cards.filter {
+            it.deckId in knownDeckIds &&
+            (ids == null || it.deckId in ids) &&
+            it.dueDate <= today
+        }
+        val newCards = due.filter { it.isNew() }.take(state.dailyNewLimit)
+        val reviewCards = due.filter { !it.isNew() }
+            .sortedBy { it.dueDate }  // most overdue first
+            .take(state.dailyReviewLimit)
         return newCards + reviewCards
+    }
+
+    /** Total due count for a deck (used to show remaining cards after a session). */
+    fun getTotalDueCount(deckId: String): Int {
+        val today = RateCardUseCase.getTodayDate()
+        val state = _uiState.value
+        val ids = if (deckId == ALL_DECKS) null else getDeckWithDescendantIds(deckId)
+        return state.cards.count { (ids == null || it.deckId in ids) && it.dueDate <= today }
     }
 
     fun getCardsForDeck(deckId: String): List<Card> {

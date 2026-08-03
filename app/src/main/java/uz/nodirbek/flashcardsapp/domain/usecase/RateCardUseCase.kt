@@ -21,7 +21,8 @@ class RateCardUseCase {
             interval = 0,
             ease = maxOf(1.3f, card.ease - 0.2f),
             dueDate = todayDate,
-            lastReviewed = todayDate
+            lastReviewed = todayDate,
+            lapses = card.lapses + 1
         )
     }
 

@@ -177,7 +177,7 @@ fun UnitFlowScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "Прогресс текущего шага будет потерян. Пройденные шаги сохранены.",
+                    "Весь прогресс юнита будет потерян. При следующем входе юнит начнётся заново.",
                     fontFamily = OutfitFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

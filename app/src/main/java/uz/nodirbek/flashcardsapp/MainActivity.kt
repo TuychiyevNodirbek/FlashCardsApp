@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
 
         container = AppContainer(this)
         notificationScheduler = NotificationScheduler(this)
+        notificationScheduler.scheduleStreakWarning()  // daily 20:00 streak protection reminder
 
         val factory = HomeViewModelFactory(
             cardRepository = container.cardRepository,

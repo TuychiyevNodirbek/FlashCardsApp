@@ -3,6 +3,7 @@ package uz.nodirbek.flashcardsapp.ui.state
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.model.DailyStats
 import uz.nodirbek.flashcardsapp.domain.model.Deck
+import uz.nodirbek.flashcardsapp.domain.model.Achievement
 
 data class DeckWithStats(
     val deck: Deck,
@@ -32,5 +33,11 @@ data class HomeUiState(
     val dailyNewLimit: Int = 20,
     val dailyReviewLimit: Int = 100,
     val ttsLang: String = "en",
-    val ttsSpeed: Float = 1f
-)
+    val ttsSpeed: Float = 1f,
+    val unlockedAchievements: Set<String> = emptySet(),
+    val rawNewCount: Int = 0,
+    val rawReviewCount: Int = 0
+) {
+    val todayNewCount get() = minOf(rawNewCount, dailyNewLimit)
+    val todayReviewCount get() = minOf(rawReviewCount, dailyReviewLimit)
+}

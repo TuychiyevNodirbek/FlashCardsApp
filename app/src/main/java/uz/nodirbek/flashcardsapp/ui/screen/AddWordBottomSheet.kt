@@ -1,5 +1,7 @@
 package uz.nodirbek.flashcardsapp.ui.screen
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,9 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
+import uz.nodirbek.flashcardsapp.data.transfer.CardParseResult
+import uz.nodirbek.flashcardsapp.data.transfer.parseCardsFromUri
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
@@ -29,14 +35,37 @@ fun AddWordBottomSheet(
     onSave: (Card) -> Unit,
     deckId: String = "default",
     subRows: List<Deck> = emptyList(),
-    onSaveAndNext: ((Card) -> Unit)? = null
+    onSaveAndNext: ((Card) -> Unit)? = null,
+    onSaveMultiple: ((List<Card>) -> Unit)? = null
 ) {
     var front by remember { mutableStateOf("") }
     var back by remember { mutableStateOf("") }
     var frontError by remember { mutableStateOf(false) }
     var backError by remember { mutableStateOf(false) }
+    var isImporting by remember { mutableStateOf(false) }
+    var importError by remember { mutableStateOf<String?>(null) }
     // Куда сохранять: последняя созданная тема по умолчанию, иначе сам курс
     var targetDeckId by remember { mutableStateOf(subRows.lastOrNull()?.id ?: deckId) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        isImporting = true
+        importError = null
+        scope.launch {
+            when (val result = parseCardsFromUri(uri, context, targetDeckId)) {
+                is CardParseResult.Success -> {
+                    onSaveMultiple?.invoke(result.cards) ?: result.cards.forEach { onSave(it) }
+                    onDismiss()
+                }
+                is CardParseResult.Error -> {
+                    importError = result.message
+                }
+            }
+            isImporting = false
+        }
+    }
 
     fun buildCard(): Card? {
         frontError = front.isBlank()
@@ -89,20 +118,60 @@ fun AddWordBottomSheet(
                     fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Import from file button
+                    Box(
+                        Modifier
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(FdPrimaryLight)
+                            .border(1.dp, FdPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .clickable(enabled = !isImporting) { fileLauncher.launch("*/*") }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isImporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = FdPrimary, strokeWidth = 2.dp)
+                        } else {
+                            Text("📂 Файл", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = FdPrimary)
+                        }
+                    }
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            // Import error
+            if (importError != null) {
                 Box(
                     Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(FdRedLight)
+                        .border(1.dp, FdRed.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .padding(10.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("⚠️", fontSize = 14.sp)
+                        Text(importError!!, fontSize = 12.sp, color = FdRed, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(20.dp).clickable { importError = null }, contentAlignment = Alignment.Center) {
+                            Text("✕", fontSize = 12.sp, color = FdRed)
+                        }
+                    }
                 }
+                Spacer(Modifier.height(12.dp))
             }
 
             // Выбор темы (subRow), если они есть у курса

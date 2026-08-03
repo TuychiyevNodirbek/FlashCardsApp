@@ -366,6 +366,74 @@ fun NavGraph(
                         homeViewModel.addCards(cards)
                         navController.popBackStack()
                     },
+                    onBackClick = { navController.popBackStack() },
+                    onBrowseAnkiWeb = { navController.navigate(Screen.BrowseSource.route) }
+                )
+            }
+
+            // ── Выбор источника колод ─────────────────────────────────────
+            composable(
+                Screen.BrowseSource.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
+            ) {
+                BrowseSourceScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onSelectAnkiWeb = { navController.navigate(Screen.AnkiWebBrowse.route) },
+                    onSelectOpenTDB = { navController.navigate(Screen.OpenTDBBrowse.route) },
+                    onSelectGitHub = { navController.navigate(Screen.GitHubDeckBrowse.route) }
+                )
+            }
+
+            // ── AnkiWeb Shared Decks browser ─────────────────────────────
+            composable(
+                Screen.AnkiWebBrowse.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
+            ) {
+                AnkiWebBrowseScreen(
+                    viewModel = homeViewModel,
+                    onCardsImported = { cards -> homeViewModel.addCards(cards) },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            // ── Open Trivia DB browser ────────────────────────────────────
+            composable(
+                Screen.OpenTDBBrowse.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
+            ) {
+                OpenTDBBrowseScreen(
+                    viewModel = homeViewModel,
+                    onCardsImported = { cards ->
+                        homeViewModel.addCards(cards)
+                        navController.popBackStack(Screen.BrowseSource.route, inclusive = true)
+                    },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            // ── GitHub Deck browser ───────────────────────────────────────
+            composable(
+                Screen.GitHubDeckBrowse.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
+            ) {
+                GitHubDeckBrowseScreen(
+                    viewModel = homeViewModel,
+                    onCardsImported = { cards ->
+                        homeViewModel.addCards(cards)
+                        navController.popBackStack(Screen.BrowseSource.route, inclusive = true)
+                    },
                     onBackClick = { navController.popBackStack() }
                 )
             }

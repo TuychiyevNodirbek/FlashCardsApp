@@ -48,8 +48,16 @@ import uz.nodirbek.flashcardsapp.data.transfer.DeckShareHelper
 import uz.nodirbek.flashcardsapp.data.transfer.DeckTransferRepository
 import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.components.BannerAction
+import uz.nodirbek.flashcardsapp.ui.components.BannerEmojiBadge
+import uz.nodirbek.flashcardsapp.ui.components.HomeBanner
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
+import uz.nodirbek.flashcardsapp.ui.components.SnackbarData
+import uz.nodirbek.flashcardsapp.ui.components.TopBannerCarousel
+import uz.nodirbek.flashcardsapp.ui.components.TopSnackbar
+import uz.nodirbek.flashcardsapp.ui.components.rememberSnackbarState
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
+import uz.nodirbek.flashcardsapp.ui.state.HomeUiState
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
@@ -69,9 +77,13 @@ fun HomeScreen(
     var showAddDeckSheet by remember { mutableStateOf(false) }
     var sharingDeck by remember { mutableStateOf<Deck?>(null) }
     val expandedDecks = remember { mutableStateOf(setOf<String>()) }
+    var deckToDelete by remember { mutableStateOf<Deck?>(null) }
+    var deleteDepth by remember { mutableStateOf(0) }
+    var deletePhase by remember { mutableStateOf(1) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbar = rememberSnackbarState()
     var backPressedOnce by remember { mutableStateOf(false) }
     var showExitHint by remember { mutableStateOf(false) }
     BackHandler {
@@ -195,11 +207,13 @@ fun HomeScreen(
                 val reviewedToday = remember(uiState.allStats, today) {
                     uiState.allStats.firstOrNull { it.date == today }?.reviewCount ?: 0
                 }
-                DailyGoalHeader(
-                    reviewedToday = reviewedToday,
-                    dailyGoal = uiState.dailyGoal,
-                    dueCount = uiState.dueCards.size,
-                    onStartReview = onNavigateToStudy
+                TopBannerCarousel(
+                    banners = homeBanners(
+                        uiState = uiState,
+                        reviewedToday = reviewedToday,
+                        deckCount = uiState.decks.size,
+                        onStartReview = onNavigateToStudy
+                    )
                 )
                 LazyColumn(Modifier.fillMaxSize()) {
                     fun renderDeck(deck: DeckWithStats, depth: Int) {
@@ -217,8 +231,11 @@ fun HomeScreen(
                                     else
                                         expandedDecks.value + deck.deck.id
                                 },
-                                onDelete = { viewModel.deleteDeck(deck.deck) },
-                                onPin = { viewModel.pinDeck(deck.deck) },
+                                onDelete = { deckToDelete = deck.deck; deleteDepth = depth; deletePhase = 1 },
+                                onPin = {
+                                    viewModel.pinDeck(deck.deck)
+                                    scope.launch { snackbar.show(SnackbarData("«${deck.deck.name}» закреплено", icon = "📌", color = FdPrimary)) }
+                                },
                                 onLongClick = if (depth == 0 && deckTransferRepository != null) {
                                     { sharingDeck = deck.deck }
                                 } else null
@@ -249,10 +266,68 @@ fun HomeScreen(
             DeckShareSheet(
                 deck = deck,
                 transferRepository = deckTransferRepository,
-                onDismiss = { sharingDeck = null }
+                onDismiss = { sharingDeck = null },
+                onSuccess = { msg ->
+                    sharingDeck = null
+                    scope.launch { snackbar.show(SnackbarData(msg, icon = "✅", color = FdGreen)) }
+                }
             )
         }
     }
+
+    deckToDelete?.let { target ->
+        if (deletePhase == 1) {
+            AlertDialog(
+                onDismissRequest = { deckToDelete = null },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = {
+                    Text(
+                        if (deleteDepth == 0) "Удалить курс?" else "Удалить тему?",
+                        fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold
+                    )
+                },
+                text = {
+                    Text("«${target.name}»" + if (deleteDepth == 0) " — все темы и слова будут удалены." else " — все слова темы будут удалены.")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (deleteDepth == 0) deletePhase = 2
+                        else { viewModel.deleteDeck(target); scope.launch { snackbar.show(SnackbarData("«${target.name}» удалено", icon = "🗑️", color = FdRed)) }; deckToDelete = null }
+                    }) {
+                        Text(if (deleteDepth == 0) "Продолжить" else "Удалить", fontWeight = FontWeight.Bold, color = FdRed)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deckToDelete = null }) {
+                        Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { deckToDelete = null },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = {
+                    Text("Точно удалить?", fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold)
+                },
+                text = {
+                    Text("Восстановить «${target.name}» невозможно. Все данные курса исчезнут навсегда.")
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.deleteDeck(target); scope.launch { snackbar.show(SnackbarData("«${target.name}» удалено", icon = "🗑️", color = FdRed)) }; deckToDelete = null }) {
+                        Text("Да, удалить", fontWeight = FontWeight.ExtraBold, color = FdRed)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deckToDelete = null }) {
+                        Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            )
+        }
+    }
+
+    TopSnackbar(data = snackbar.data)
 
     // Custom top snackbar for double-back-to-exit hint
     AnimatedVisibility(
@@ -284,76 +359,105 @@ fun HomeScreen(
     } // end outer Box
 }
 
+/**
+ * Набор баннеров верхней карусели. Пустые по смыслу баннеры (нулевая серия,
+ * пустая коллекция) не показываются, чтобы карусель не крутила заглушки.
+ */
 @Composable
-private fun DailyGoalHeader(
+private fun homeBanners(
+    uiState: HomeUiState,
     reviewedToday: Int,
-    dailyGoal: Int,
-    dueCount: Int,
+    deckCount: Int,
     onStartReview: () -> Unit
-) {
+): List<HomeBanner> {
+    val banners = mutableListOf<HomeBanner>()
+
+    // ── Цель дня ──────────────────────────────────────────────────
+    val dailyGoal = uiState.dailyGoal
     val goalMet = dailyGoal > 0 && reviewedToday >= dailyGoal
     val progress = if (dailyGoal > 0) (reviewedToday.toFloat() / dailyGoal).coerceIn(0f, 1f) else 0f
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.size(46.dp),
-                color = if (goalMet) FdGreen else FdPrimary,
-                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                strokeWidth = 5.dp
-            )
-            Text(
-                if (goalMet) "✓" else "${(progress * 100).toInt()}%",
-                fontFamily = OutfitFamily,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = if (goalMet) 18.sp else 11.sp,
-                color = if (goalMet) FdGreen else MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                "Цель дня",
-                fontFamily = OutfitFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                if (goalMet) "Выполнена! $reviewedToday из $dailyGoal"
-                else "$reviewedToday из $dailyGoal повторений",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (dueCount > 0) {
-            uz.nodirbek.flashcardsapp.ui.components.PressButton(
-                onClick = onStartReview,
-                modifier = Modifier.height(38.dp),
-                color = FdOrange,
-                shadowColor = FdOrangeDark,
-                shape = RoundedCornerShape(10.dp)
-            ) {
+    val reviewCount = uiState.todayReviewCount
+    val newCount = uiState.todayNewCount
+    val hasWork = reviewCount > 0 || newCount > 0
+    banners += HomeBanner(
+        id = "daily_goal",
+        title = "Сегодня",
+        subtitle = when {
+            !hasWork -> "Всё повторено ✓"
+            reviewCount > 0 && newCount > 0 -> "$reviewCount повторов · $newCount новых"
+            reviewCount > 0 -> "$reviewCount на повтор"
+            else -> "$newCount новых слов"
+        },
+        subtitleColor = if (hasWork) null else FdGreen,
+        action = if (hasWork) {
+            BannerAction("Начать", FdOrange, FdOrangeDark, onStartReview)
+        } else null,
+        leading = {
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.size(46.dp),
+                    color = if (goalMet) FdGreen else FdPrimary,
+                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                    strokeWidth = 5.dp
+                )
                 Text(
-                    "🔄 $dueCount",
+                    if (goalMet) "✓" else "${(progress * 100).toInt()}%",
                     fontFamily = OutfitFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = if (goalMet) 18.sp else 11.sp,
+                    color = if (goalMet) FdGreen else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
+    )
+
+    // ── Серия ─────────────────────────────────────────────────────
+    if (uiState.streak > 0) {
+        val streak = uiState.streak
+        banners += HomeBanner(
+            id = "streak",
+            title = "Серия $streak ${plural(streak, "день", "дня", "дней")}",
+            subtitle = if (uiState.streakRecord > streak)
+                "Рекорд: ${uiState.streakRecord} ${plural(uiState.streakRecord, "день", "дня", "дней")}"
+            else
+                "Это твой рекорд — не прерывай!",
+            subtitleColor = if (uiState.streakRecord > streak) null else FdOrange,
+            leading = { BannerEmojiBadge("🔥", FdOrange.copy(alpha = 0.14f)) }
+        )
+    }
+
+    // ── Уровень ───────────────────────────────────────────────────
+    val xpInLevel = (uiState.xp % 100).toInt()
+    banners += HomeBanner(
+        id = "level",
+        title = "Уровень ${uiState.level}",
+        subtitle = "${100 - xpInLevel} XP до Lv.${uiState.level + 1} · всего ${uiState.xp} XP",
+        leading = { BannerEmojiBadge("⭐", FdOrange.copy(alpha = 0.14f)) }
+    )
+
+    // ── Коллекция ─────────────────────────────────────────────────
+    if (uiState.cardCount > 0) {
+        banners += HomeBanner(
+            id = "collection",
+            title = "Коллекция",
+            subtitle = "$deckCount ${plural(deckCount, "колода", "колоды", "колод")} · " +
+                "${uiState.cardCount} ${plural(uiState.cardCount, "карта", "карты", "карт")}",
+            leading = { BannerEmojiBadge("📚", FdPrimary.copy(alpha = 0.14f)) }
+        )
+    }
+
+    return banners
+}
+
+/** Русские падежные формы: 1 день / 2 дня / 5 дней. */
+private fun plural(n: Int, one: String, few: String, many: String): String {
+    val mod100 = n % 100
+    if (mod100 in 11..14) return many
+    return when (n % 10) {
+        1 -> one
+        2, 3, 4 -> few
+        else -> many
     }
 }
 
@@ -372,6 +476,24 @@ private fun Badge(streak: Int, icon: String, bgColor: Color, textColor: Color) {
             "$streak",
             fontFamily = OutfitFamily,
             fontWeight = FontWeight.ExtraBold,
+            fontSize = 12.sp,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+private fun CountChip(label: String, bgColor: Color, textColor: Color) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Text(
+            label,
+            fontFamily = OutfitFamily,
+            fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
             color = textColor
         )
@@ -448,7 +570,10 @@ private fun DeckRow(
                 onPin()
                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
-            SwipeToDismissBoxValue.EndToStart -> onDelete()
+            SwipeToDismissBoxValue.EndToStart -> {
+                onDelete()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
             else -> {}
         }
     }
@@ -534,31 +659,24 @@ private fun DeckRow(
                     )
                 }
                 Text(
-                    "${deck.totalCards} карт · ${deck.newCards} новых",
+                    "${deck.totalCards} карт",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
-            // Due badge or chevron
-            if (deck.dueCards > 0) {
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                        .padding(horizontal = 11.dp, vertical = 5.dp)
-                ) {
-                    Text(
-                        "${deck.dueCards}",
-                        fontFamily = OutfitFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+            // Status chips: new (blue) + review (orange) or checkmark
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (deck.newCards == 0 && deck.dueCards == 0) {
+                    Text("✓", fontSize = 16.sp, color = FdGreen, fontWeight = FontWeight.Bold)
+                } else {
+                    if (deck.newCards > 0) {
+                        CountChip(label = "🆕 ${deck.newCards}", bgColor = FdPrimary.copy(alpha = 0.12f), textColor = FdPrimary)
+                    }
+                    if (deck.dueCards > 0) {
+                        CountChip(label = "🔄 ${deck.dueCards}", bgColor = FdOrangeLight, textColor = FdOrangeDark)
+                    }
                 }
-            } else {
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
@@ -680,13 +798,13 @@ private fun DeckRowPreview() {
 private fun DeckShareSheet(
     deck: Deck,
     transferRepository: DeckTransferRepository,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onSuccess: (message: String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var exportError by remember { mutableStateOf<String?>(null) }
 
-    // «Сохранить в файл» через системный диалог создания документа
     var pendingContent by remember { mutableStateOf<String?>(null) }
     val createDocLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
@@ -697,16 +815,17 @@ private fun DeckShareSheet(
                 context.contentResolver.openOutputStream(uri)?.use { out ->
                     out.write(content.toByteArray(Charsets.UTF_8))
                 }
+                onSuccess("Файл сохранён")
             } catch (e: Exception) {
                 exportError = e.message
+                onDismiss()
             }
         }
         pendingContent = null
-        onDismiss()
     }
 
     suspend fun buildContent(): String {
-        val file = transferRepository.exportDeck(deck.id, DeckShareHelper.appVersion(context))
+        val file = transferRepository.exportDeck(deck.id)
         return transferRepository.serialize(file)
     }
 
@@ -728,7 +847,7 @@ private fun DeckShareSheet(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                "Файл .fdeck можно отправить в любой мессенджер — получатель импортирует его в приложении",
+                "Файл .md можно отправить в любой мессенджер — получатель импортирует его в приложении",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -751,7 +870,7 @@ private fun DeckShareSheet(
                                 DeckShareHelper.safeFileName(deck.name),
                                 buildContent()
                             )
-                            onDismiss()
+                            onSuccess("Колода отправлена")
                         } catch (e: Exception) {
                             exportError = e.message
                         }

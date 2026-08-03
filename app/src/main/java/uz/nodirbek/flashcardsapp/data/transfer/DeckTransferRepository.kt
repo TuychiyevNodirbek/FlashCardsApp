@@ -1,7 +1,6 @@
 package uz.nodirbek.flashcardsapp.data.transfer
 
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.json.Json
 import uz.nodirbek.flashcardsapp.data.repository.CardRepository
 import uz.nodirbek.flashcardsapp.data.repository.DeckRepository
 import uz.nodirbek.flashcardsapp.domain.model.Card
@@ -13,36 +12,26 @@ class FdeckParseException(message: String) : Exception(message)
 class FdeckVersionException(val fileVersion: Int) :
     Exception("Файл создан в более новой версии приложения (v$fileVersion)")
 
-/** Экспорт/импорт курса в формате .fdeck. */
+/** Экспорт/импорт курса в формате .md. */
 class DeckTransferRepository(
     private val cardRepository: CardRepository,
     private val deckRepository: DeckRepository
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        prettyPrint = true
-        encodeDefaults = true
-    }
 
-    suspend fun exportDeck(courseDeckId: String, appVersion: String): FdeckFile {
+    suspend fun exportDeck(courseDeckId: String): FdeckFile {
         val course = deckRepository.getDeckById(courseDeckId)
             ?: throw FdeckParseException("Колода не найдена")
         val children = deckRepository.getChildDecks(courseDeckId).first()
 
         return FdeckFile(
-            exportedAt = System.currentTimeMillis(),
-            appVersion = appVersion,
             deck = FdeckDeck(
-                id = course.id,
                 name = course.name,
                 colorHex = course.colorHex,
                 cards = cardRepository.getCardsByDeck(courseDeckId).first().map { it.toFdeck() },
-                subRows = children.mapIndexed { i, child ->
+                subRows = children.map { child ->
                     FdeckSubRow(
-                        id = child.id,
                         name = child.name,
                         colorHex = child.colorHex,
-                        sortOrder = i,
                         cards = cardRepository.getCardsByDeck(child.id).first().map { it.toFdeck() }
                     )
                 }
@@ -50,18 +39,95 @@ class DeckTransferRepository(
         )
     }
 
-    fun serialize(file: FdeckFile): String = json.encodeToString(FdeckFile.serializer(), file)
+    fun serialize(file: FdeckFile): String = buildString {
+        append("<!-- ${FdeckFile.FORMAT}:${file.version} exportedAt=${file.exportedAt} appVersion=${file.appVersion} -->\n")
+        append("# ${file.deck.name.oneLine()} <!-- color:${file.deck.colorHex} -->\n\n")
+        file.deck.cards.forEach { append("${it.front.oneLine()} :: ${it.back.oneLine()}\n") }
+        if (file.deck.cards.isNotEmpty()) append("\n")
+        file.deck.subRows.forEach { subRow ->
+            append("## ${subRow.name.oneLine()} <!-- color:${subRow.colorHex} -->\n\n")
+            subRow.cards.forEach { append("${it.front.oneLine()} :: ${it.back.oneLine()}\n") }
+            append("\n")
+        }
+    }
+
+    private fun String.oneLine() = replace("\n", " ").replace("\r", " ").trim()
+
+    private val headerCommentRegex = Regex("""<!--\s*fdeck:(\d+).*?-->""")
+    private val colorCommentRegex = Regex("""<!--\s*color:(#[0-9A-Fa-f]{6})\s*-->""")
 
     /** @throws FdeckParseException / FdeckVersionException при неподходящем файле. */
-    fun parse(jsonText: String): FdeckFile {
-        val file = try {
-            json.decodeFromString(FdeckFile.serializer(), jsonText)
-        } catch (e: Exception) {
-            throw FdeckParseException("Не удалось прочитать файл: ${e.message}")
+    fun parse(text: String): FdeckFile {
+        var version = FdeckFile.VERSION
+        var deckName: String? = null
+        var deckColor = "#4255FF"
+        val deckCards = mutableListOf<FdeckCard>()
+        val subRows = mutableListOf<FdeckSubRow>()
+
+        var currentSubRowName: String? = null
+        var currentSubRowColor = "#4255FF"
+        var currentSubRowCards = mutableListOf<FdeckCard>()
+
+        fun flushSubRow() {
+            val name = currentSubRowName ?: return
+            subRows.add(
+                FdeckSubRow(
+                    name = name,
+                    colorHex = currentSubRowColor,
+                    sortOrder = subRows.size,
+                    cards = currentSubRowCards.toList()
+                )
+            )
+            currentSubRowCards = mutableListOf()
         }
-        if (file.format != FdeckFile.FORMAT) throw FdeckParseException("Неизвестный формат «${file.format}»")
-        if (file.version > FdeckFile.VERSION) throw FdeckVersionException(file.version)
-        return file
+
+        for (rawLine in text.lines()) {
+            val line = rawLine.trim()
+            if (line.isEmpty()) continue
+
+            headerCommentRegex.find(line)?.let { version = it.groupValues[1].toIntOrNull() ?: version }
+
+            when {
+                line.startsWith("## ") -> {
+                    flushSubRow()
+                    val content = line.removePrefix("## ").trim()
+                    currentSubRowName = colorCommentRegex.find(content)?.let {
+                        currentSubRowColor = it.groupValues[1]
+                        content.substringBefore("<!--").trim()
+                    } ?: content
+                }
+                line.startsWith("# ") -> {
+                    val content = line.removePrefix("# ").trim()
+                    deckName = colorCommentRegex.find(content)?.let {
+                        deckColor = it.groupValues[1]
+                        content.substringBefore("<!--").trim()
+                    } ?: content
+                }
+                line.startsWith("<!--") -> Unit
+                line.contains("::") -> {
+                    val front = line.substringBefore("::").trim()
+                    val back = line.substringAfter("::").trim()
+                    if (front.isNotEmpty() && back.isNotEmpty()) {
+                        val card = FdeckCard(front = front, back = back)
+                        if (currentSubRowName != null) currentSubRowCards.add(card) else deckCards.add(card)
+                    }
+                }
+            }
+        }
+        flushSubRow()
+
+        val name = deckName ?: throw FdeckParseException("Не найден заголовок колоды")
+        if (version > FdeckFile.VERSION) throw FdeckVersionException(version)
+
+        return FdeckFile(
+            version = version,
+            deck = FdeckDeck(
+                name = name,
+                colorHex = deckColor,
+                subRows = subRows,
+                cards = deckCards
+            )
+        )
     }
 
     /**
@@ -110,5 +176,5 @@ class DeckTransferRepository(
         )
     }
 
-    private fun Card.toFdeck() = FdeckCard(id = id, front = front, back = back)
+    private fun Card.toFdeck() = FdeckCard(front = front, back = back)
 }

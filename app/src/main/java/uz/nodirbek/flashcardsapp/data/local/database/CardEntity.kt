@@ -18,5 +18,6 @@ data class CardEntity(
     val dueDate: String,
     val lastReviewed: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    val lapses: Int = 0
 )

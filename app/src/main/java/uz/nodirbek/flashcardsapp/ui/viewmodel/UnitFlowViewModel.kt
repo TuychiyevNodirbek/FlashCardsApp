@@ -57,13 +57,9 @@ class UnitFlowViewModel(
             val units = unitRepository.getUnits(deckId).first()
             val unit = units.getOrNull(unitIndex)
             if (unit != null) {
-                // Resume: продолжить с сохранённого шага, если юнит начат, но не завершён
-                val resumeStep = if (!unit.completed && unit.completedSteps in 1 until _uiState.value.steps.size) {
-                    unit.completedSteps
-                } else {
-                    0
-                }
-                _uiState.update { it.copy(cards = unit.cards, stepIndex = resumeStep, isLoading = false) }
+                // Прогресс не сохраняется, пока юнит не пройден полностью — при повторном
+                // входе (в том числе после выхода на середине) юнит всегда начинается с начала.
+                _uiState.update { it.copy(cards = unit.cards, stepIndex = 0, isLoading = false) }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -99,13 +95,8 @@ class UnitFlowViewModel(
                 }
                 _uiState.update { it.copy(correctAnswers = newCorrect, totalAnswers = newTotal, finished = true) }
             } else {
-                unitRepository.saveProgress(
-                    deckId = deckId,
-                    unitIndex = unitIndex,
-                    completedSteps = nextStep,
-                    completed = false,
-                    accuracy = 0f
-                )
+                // Промежуточный прогресс намеренно не сохраняется — если пользователь выйдет
+                // до конца юнита, при следующем входе он должен начать юнит заново.
                 _uiState.update { it.copy(correctAnswers = newCorrect, totalAnswers = newTotal, stepIndex = nextStep) }
             }
         }

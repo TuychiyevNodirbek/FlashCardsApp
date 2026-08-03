@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [CardEntity::class, DeckEntity::class, DailyStatsEntity::class, UnitProgressEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class FlashCardsDatabase : RoomDatabase() {
@@ -21,6 +21,12 @@ abstract class FlashCardsDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: FlashCardsDatabase? = null
+
+        internal val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE cards ADD COLUMN lapses INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         internal val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -96,7 +102,7 @@ abstract class FlashCardsDatabase : RoomDatabase() {
                     FlashCardsDatabase::class.java,
                     "flashcards_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                 INSTANCE = instance
                 instance

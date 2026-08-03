@@ -5,7 +5,7 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
 
-/** Подготовка и отправка .fdeck файла через системный share sheet. */
+/** Подготовка и отправка .md файла колоды через системный share sheet. */
 object DeckShareHelper {
 
     fun appVersion(context: Context): String = try {
@@ -31,7 +31,7 @@ object DeckShareHelper {
             outFile
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/octet-stream"
+            type = "text/markdown"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }

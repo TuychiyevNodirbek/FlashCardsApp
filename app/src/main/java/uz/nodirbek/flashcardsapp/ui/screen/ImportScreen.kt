@@ -29,12 +29,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uz.nodirbek.flashcardsapp.data.transfer.AnkiApkgImporter
+import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportException
+import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportResult
 import uz.nodirbek.flashcardsapp.data.transfer.DeckTransferRepository
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckFile
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckParseException
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckVersionException
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.components.HtmlText
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
@@ -45,7 +49,8 @@ fun ImportScreen(
     viewModel: HomeViewModel,
     deckTransferRepository: DeckTransferRepository? = null,
     onCardsImported: (List<Card>) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onBrowseAnkiWeb: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var message by remember { mutableStateOf("") }
@@ -56,10 +61,13 @@ fun ImportScreen(
     var selectedDeckId by remember { mutableStateOf<String?>(null) }
     var showCreateDeckDialog by remember { mutableStateOf(false) }
     var newDeckName by remember { mutableStateOf("") }
+    var ankiNewDeckName by remember { mutableStateOf("") }
+    var ankiShowNewDeckField by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showSuccessSnackbar by remember { mutableStateOf(false) }
     var fdeckPreview by remember { mutableStateOf<FdeckFile?>(null) }
+    var ankiPreview by remember { mutableStateOf<AnkiImportResult?>(null) }
 
     val allDecks = uiState.decks.flatMap { listOf(it) + it.children.flatMap { child ->
         fun flattenDecks(d: uz.nodirbek.flashcardsapp.ui.state.DeckWithStats): List<uz.nodirbek.flashcardsapp.ui.state.DeckWithStats> {
@@ -68,10 +76,40 @@ fun ImportScreen(
         flattenDecks(child)
     }}.distinctBy { it.deck.id }
 
+    val ankiImporter = remember { AnkiApkgImporter(context) }
+
+    fun displayNameOf(uri: android.net.Uri): String? {
+        return context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+        }
+    }
+
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
+            val fileName = displayNameOf(uri).orEmpty()
+            if (fileName.endsWith(".apkg", ignoreCase = true)) {
+                isLoading = true
+                scope.launch {
+                    try {
+                        ankiPreview = ankiImporter.import(uri)
+                        isError = false
+                        message = ""
+                    } catch (e: AnkiImportException) {
+                        message = e.message ?: "Не удалось прочитать файл Anki"
+                        isError = true
+                        isSuccess = false
+                    } catch (e: Exception) {
+                        message = "Ошибка: ${e.message}"
+                        isError = true
+                        isSuccess = false
+                    }
+                    isLoading = false
+                }
+                return@rememberLauncherForActivityResult
+            }
             isLoading = true
             try {
                 val inputStream = context.contentResolver.openInputStream(uri)
@@ -92,8 +130,12 @@ fun ImportScreen(
                     return@rememberLauncherForActivityResult
                 }
 
-                // .fdeck detection — if JSON, try to parse as fdeck before CSV logic
-                if (content.trimStart().startsWith("{")) {
+                // .md deck detection — if it looks like a deck (header/metadata comment), try to parse before CSV logic
+                val sniff = content.lineSequence()
+                    .map { it.trim() }
+                    .firstOrNull { it.isNotEmpty() && !it.startsWith("<!--") }
+                    .orEmpty()
+                if (sniff.startsWith("# ")) {
                     if (deckTransferRepository != null) {
                         try {
                             fdeckPreview = deckTransferRepository.parse(content)
@@ -101,11 +143,11 @@ fun ImportScreen(
                             message = "Файл создан в более новой версии приложения"
                             isError = true
                         } catch (e: FdeckParseException) {
-                            message = e.message ?: "Не удалось прочитать .fdeck файл"
+                            message = e.message ?: "Не удалось прочитать .md файл"
                             isError = true
                         }
                     } else {
-                        message = "Импорт .fdeck не поддерживается"
+                        message = "Импорт .md колоды не поддерживается"
                         isError = true
                     }
                     isLoading = false
@@ -215,7 +257,7 @@ fun ImportScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "CSV, TSV или .fdeck файл",
+                                "Импортировать файл с карточками",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -224,7 +266,25 @@ fun ImportScreen(
                 }
             }
 
-            // .fdeck preview — shown after picking a .fdeck file, before user confirms import
+            item {
+                PressButton(
+                    onClick = onBrowseAnkiWeb,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowColor = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        "🌐 Найти колоды в AnkiWeb",
+                        fontFamily = OutfitFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = FdPrimary
+                    )
+                }
+            }
+
+            // .md deck preview — shown after picking a deck .md file, before user confirms import
             if (fdeckPreview != null) {
                 item {
                     val preview = fdeckPreview!!
@@ -242,7 +302,7 @@ fun ImportScreen(
                     ) {
                         Column {
                             Text(
-                                "📦 Найдена колода .fdeck",
+                                "📦 Найдена колода .md",
                                 fontFamily = OutfitFamily,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 14.sp,
@@ -267,22 +327,7 @@ fun ImportScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(16.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                PressButton(
-                                    onClick = { fdeckPreview = null },
-                                    modifier = Modifier.weight(1f).height(44.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    shadowColor = MaterialTheme.colorScheme.outline,
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        "Отмена",
-                                        fontFamily = OutfitFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 PressButton(
                                     onClick = {
                                         scope.launch {
@@ -304,7 +349,7 @@ fun ImportScreen(
                                             isLoading = false
                                         }
                                     },
-                                    modifier = Modifier.weight(2f).height(44.dp),
+                                    modifier = Modifier.fillMaxWidth().height(50.dp),
                                     color = FdPrimary,
                                     shadowColor = FdPrimaryDark,
                                     shape = RoundedCornerShape(12.dp),
@@ -314,8 +359,282 @@ fun ImportScreen(
                                         if (isLoading) "Импорт..." else "Импортировать",
                                         fontFamily = OutfitFamily,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
+                                        fontSize = 15.sp,
                                         color = Color.White
+                                    )
+                                }
+                                PressButton(
+                                    onClick = { fdeckPreview = null },
+                                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shadowColor = MaterialTheme.colorScheme.outline,
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        "Отмена",
+                                        fontFamily = OutfitFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Anki .apkg preview — shown after picking an Anki file, before user confirms import
+            if (ankiPreview != null) {
+                item {
+                    val preview = ankiPreview!!
+                    val canImport = selectedDeckId != null || ankiNewDeckName.isNotBlank()
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(FdPrimaryLight)
+                            .border(2.dp, FdPrimary.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                "🎴 Найдена колода Anki",
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp,
+                                color = FdPrimary
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                preview.deckName,
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "${preview.cards.size} ${pluralWords(preview.cards.size)}",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                preview.cards.take(3).forEach { card ->
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.surface)
+                                            .padding(10.dp)
+                                    ) {
+                                        Column {
+                                            HtmlText(
+                                                card.front,
+                                                fontFamily = OutfitFamily,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 2
+                                            )
+                                            Spacer(Modifier.height(2.dp))
+                                            HtmlText(
+                                                card.back,
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Deck picker inside preview
+                            Spacer(Modifier.height(16.dp))
+                            HorizontalDivider(color = FdPrimary.copy(alpha = 0.15f))
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "В какую колоду?",
+                                fontFamily = OutfitFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            if (allDecks.isNotEmpty()) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    allDecks.take(4).forEach { deckItem ->
+                                        val isSelected = selectedDeckId == deckItem.deck.id
+                                        Box(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(if (isSelected) FdPrimary else MaterialTheme.colorScheme.surface)
+                                                .border(
+                                                    1.5.dp,
+                                                    if (isSelected) FdPrimary else MaterialTheme.colorScheme.outline,
+                                                    RoundedCornerShape(10.dp)
+                                                )
+                                                .clickable {
+                                                    selectedDeckId = if (isSelected) null else deckItem.deck.id
+                                                    ankiNewDeckName = ""
+                                                    ankiShowNewDeckField = false
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (isSelected) {
+                                                    Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                                    Spacer(Modifier.width(6.dp))
+                                                }
+                                                Text(
+                                                    deckItem.deck.name,
+                                                    fontFamily = OutfitFamily,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 13.sp,
+                                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(Modifier.weight(1f))
+                                                Text(
+                                                    "${deckItem.totalCards} карт.",
+                                                    fontSize = 11.sp,
+                                                    color = if (isSelected) Color.White.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+
+                            // Inline new deck creation
+                            if (ankiShowNewDeckField) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    TextField(
+                                        value = ankiNewDeckName,
+                                        onValueChange = {
+                                            ankiNewDeckName = it
+                                            if (it.isNotBlank()) selectedDeckId = null
+                                        },
+                                        placeholder = { Text("Название новой колоды", fontSize = 13.sp) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            focusedIndicatorColor = FdPrimary,
+                                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
+                                        )
+                                    )
+                                    PressButton(
+                                        onClick = { ankiShowNewDeckField = false; ankiNewDeckName = "" },
+                                        modifier = Modifier.size(40.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        shadowColor = MaterialTheme.colorScheme.outline,
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("✕", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            } else {
+                                PressButton(
+                                    onClick = {
+                                        ankiShowNewDeckField = true
+                                        selectedDeckId = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(38.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shadowColor = MaterialTheme.colorScheme.outline,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        "+ Создать новую колоду",
+                                        fontFamily = OutfitFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = FdPrimary
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PressButton(
+                                    onClick = {
+                                        val today = RateCardUseCase.getTodayDate()
+                                        val targetDeckId = if (ankiNewDeckName.isNotBlank()) {
+                                            val newId = java.util.UUID.randomUUID().toString()
+                                            viewModel.addDeckWithId(newId, ankiNewDeckName.trim())
+                                            newId
+                                        } else {
+                                            selectedDeckId ?: return@PressButton
+                                        }
+                                        val cards = preview.cards.map { c ->
+                                            Card(
+                                                id = java.util.UUID.randomUUID().toString(),
+                                                front = c.front,
+                                                back = c.back,
+                                                deckId = targetDeckId,
+                                                dueDate = today,
+                                                createdAt = System.currentTimeMillis()
+                                            )
+                                        }
+                                        onCardsImported(cards)
+                                        importedCount = cards.size
+                                        ankiPreview = null
+                                        ankiNewDeckName = ""
+                                        ankiShowNewDeckField = false
+                                        isSuccess = true
+                                        isError = false
+                                        message = ""
+                                        showSuccessSnackbar = true
+                                        scope.launch {
+                                            delay(3000)
+                                            showSuccessSnackbar = false
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                                    color = if (canImport) FdPrimary else FdPrimary.copy(alpha = 0.4f),
+                                    shadowColor = if (canImport) FdPrimaryDark else FdPrimaryDark.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = canImport
+                                ) {
+                                    Text(
+                                        "Импортировать",
+                                        fontFamily = OutfitFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = Color.White
+                                    )
+                                }
+                                PressButton(
+                                    onClick = {
+                                        ankiPreview = null
+                                        ankiNewDeckName = ""
+                                        ankiShowNewDeckField = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shadowColor = MaterialTheme.colorScheme.outline,
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        "Отмена",
+                                        fontFamily = OutfitFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -346,6 +665,8 @@ fun ImportScreen(
                         FormatRow("Разделитель", "Tab, точка с запятой (;) или запятая (,)")
                         Spacer(Modifier.height(8.dp))
                         FormatRow("Структура", "термин [разделитель] перевод")
+                        Spacer(Modifier.height(8.dp))
+                        FormatRow("Anki", "файл .apkg — первые 2 поля заметки станут term/перевод")
                         Spacer(Modifier.height(12.dp))
                         // Example box
                         Box(
@@ -597,49 +918,50 @@ fun ImportScreen(
             onDismissRequest = { showCreateDeckDialog = false },
             title = { Text("Создать новую колоду", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
             text = {
-                TextField(
-                    value = newDeckName,
-                    onValueChange = { newDeckName = it },
-                    placeholder = { Text("Название колоды") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-                        focusedIndicatorColor = FdPrimary
+                Column {
+                    TextField(
+                        value = newDeckName,
+                        onValueChange = { newDeckName = it },
+                        placeholder = { Text("Название колоды") },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = androidx.compose.material3.LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                            focusedIndicatorColor = FdPrimary
+                        )
                     )
-                )
-            },
-            confirmButton = {
-                PressButton(
-                    onClick = {
-                        if (newDeckName.isNotBlank()) {
-                            viewModel.addDeck(newDeckName)
-                            newDeckName = ""
-                            showCreateDeckDialog = false
-                        }
-                    },
-                    modifier = Modifier.height(40.dp),
-                    color = FdPrimary,
-                    shadowColor = FdPrimaryDark,
-                    shape = RoundedCornerShape(10.dp),
-                    enabled = newDeckName.isNotBlank()
-                ) {
-                    Text("Создать", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                    Spacer(Modifier.height(16.dp))
+                    PressButton(
+                        onClick = {
+                            if (newDeckName.isNotBlank()) {
+                                viewModel.addDeck(newDeckName)
+                                newDeckName = ""
+                                showCreateDeckDialog = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        color = FdPrimary,
+                        shadowColor = FdPrimaryDark,
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = newDeckName.isNotBlank()
+                    ) {
+                        Text("Создать", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    PressButton(
+                        onClick = { showCreateDeckDialog = false },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowColor = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
             },
-            dismissButton = {
-                PressButton(
-                    onClick = { showCreateDeckDialog = false },
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowColor = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Отмена", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
-                }
-            },
+            confirmButton = {},
             containerColor = MaterialTheme.colorScheme.surface,
             textContentColor = MaterialTheme.colorScheme.onSurface,
             titleContentColor = MaterialTheme.colorScheme.onSurface
