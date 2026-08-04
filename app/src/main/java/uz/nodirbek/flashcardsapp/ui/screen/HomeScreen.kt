@@ -609,25 +609,29 @@ private fun DeckRow(
     val indentDp = (14 + depth * 20).dp
     val indicatorColor = try { Color(android.graphics.Color.parseColor(deck.deck.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
 
+    // Свайп — только жест-триггер, карточка всегда возвращается на место сама
+    // (confirmValueChange возвращает false), а не «застревает» в EndToStart.
+    //
+    // Раньше состояние подтверждалось (confirmValueChange = value == EndToStart),
+    // и сброс к Settled делался отдельно через LaunchedEffect(currentValue) +
+    // dismissState.snapTo(...). SwipeToDismissBoxState сохраняется через
+    // rememberSaveable, и если snapTo не успевал доработать до того, как
+    // экран уходил из композиции (например, пользователь тут же переходил на
+    // другой экран), currentValue оставался EndToStart. При возврате на Home
+    // LaunchedEffect перезапускался с этим значением и снова открывал диалог
+    // удаления — даже если пользователь его до этого отменил и ничего не свайпал.
+    // Заодно value == EndToStart отсекал StartToEnd, так что pin по факту
+    // никогда не подтверждался этим путём.
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            value == SwipeToDismissBoxValue.EndToStart
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> onPin()
+                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                SwipeToDismissBoxValue.Settled -> {}
+            }
+            false
         }
     )
-
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.StartToEnd -> {
-                onPin()
-                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            }
-            SwipeToDismissBoxValue.EndToStart -> {
-                onDelete()
-                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            }
-            else -> {}
-        }
-    }
 
     SwipeToDismissBox(
         state = dismissState,
