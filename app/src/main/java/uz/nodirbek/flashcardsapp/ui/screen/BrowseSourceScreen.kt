@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 
 data class DeckSource(
     val id: String,
@@ -70,13 +70,11 @@ fun BrowseSourceScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Найти колоды", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+            UnifiedAppBar(
+                title = "Найти колоды",
+                onBackClick = onBackClick,
+                showBackButton = true,
+                showDivider = true
             )
         }
     ) { padding ->

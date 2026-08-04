@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +26,8 @@ import uz.nodirbek.flashcardsapp.data.transfer.FdeckCard
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import android.util.Log
+import uz.nodirbek.flashcardsapp.ui.components.DeckPickerSection
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 import java.net.HttpURLConnection
@@ -144,13 +145,11 @@ fun OpenTDBBrowseScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Open Trivia DB", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+            UnifiedAppBar(
+                title = "Open Trivia DB",
+                onBackClick = onBackClick,
+                showBackButton = true,
+                showDivider = true
             )
         }
     ) { padding ->
@@ -292,41 +291,17 @@ fun OpenTDBBrowseScreen(
                 }
 
                 item {
-                    if (allDecks.isEmpty()) {
-                        Text(
-                            "Нет колод. Создайте колоду перед импортом.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            allDecks.forEach { d ->
-                                val isSelected = selectedDeckId == d.deck.id
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(
-                                            if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                            else MaterialTheme.colorScheme.surface
-                                        )
-                                        .border(
-                                            1.5.dp,
-                                            if (isSelected) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.outlineVariant,
-                                            RoundedCornerShape(10.dp)
-                                        )
-                                        .clickable { selectedDeckId = d.deck.id }
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    if (isSelected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                    Text(d.deck.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                }
-                            }
-                        }
-                    }
+                    DeckPickerSection(
+                        allDecks = allDecks,
+                        selectedDeckId = selectedDeckId,
+                        onSelectDeck = { selectedDeckId = it },
+                        onCreateDeck = { name ->
+                            val id = java.util.UUID.randomUUID().toString()
+                            viewModel.addDeckWithId(id, name)
+                            selectedDeckId = id
+                        },
+                        suggestedName = "${selectedCategory.emoji} ${selectedCategory.name}"
+                    )
                 }
 
                 item {

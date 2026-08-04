@@ -10,6 +10,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
@@ -20,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +40,7 @@ import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportResult
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
 import uz.nodirbek.flashcardsapp.notification.DownloadNotificationHelper
+import uz.nodirbek.flashcardsapp.ui.components.DeckPickerSection
 import uz.nodirbek.flashcardsapp.ui.components.HtmlText
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
@@ -55,6 +60,7 @@ fun AnkiWebBrowseScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val keyboard = LocalSoftwareKeyboardController.current
     val uiState by viewModel.uiState.collectAsState()
 
     val browser = remember { AnkiWebBrowser(context) }
@@ -84,6 +90,7 @@ fun AnkiWebBrowseScreen(
     fun doSearch() {
         val q = query.trim()
         if (q.isBlank()) return
+        keyboard?.hide()
         isSearching = true
         searchError = null
         hasSearched = true
@@ -237,32 +244,17 @@ fun AnkiWebBrowseScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    if (allDecks.isEmpty()) {
-                        Text("Нет колод. Создайте колоду в приложении перед импортом.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            allDecks.forEach { deck ->
-                                val isSelected = selectedTargetDeckId == deck.deck.id
-                                Box(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isSelected) FdPrimaryLight else MaterialTheme.colorScheme.surface)
-                                        .border(1.5.dp, if (isSelected) FdPrimary else MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
-                                        .clickable { selectedTargetDeckId = deck.deck.id }
-                                        .padding(12.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (isSelected) {
-                                            Icon(Icons.Default.Check, null, tint = FdPrimary, modifier = Modifier.size(18.dp))
-                                            Spacer(Modifier.width(8.dp))
-                                        }
-                                        Text(deck.deck.name, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    DeckPickerSection(
+                        allDecks = allDecks,
+                        selectedDeckId = selectedTargetDeckId,
+                        onSelectDeck = { selectedTargetDeckId = it },
+                        onCreateDeck = { name ->
+                            val id = java.util.UUID.randomUUID().toString()
+                            viewModel.addDeckWithId(id, name)
+                            selectedTargetDeckId = id
+                        },
+                        suggestedName = preview.deckName
+                    )
                 }
                 item {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -386,6 +378,8 @@ fun AnkiWebBrowseScreen(
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Например: spanish, biology…") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { doSearch() }),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,

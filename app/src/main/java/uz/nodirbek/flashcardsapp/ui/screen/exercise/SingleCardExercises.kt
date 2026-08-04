@@ -335,7 +335,9 @@ fun SingleCardWrite(
                 cursorBrush = SolidColor(FdPrimary),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { check() }),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (!revealed) check() else onResult(checkResult == true)
+                }),
                 decorationBox = { inner ->
                     if (input.isEmpty()) Text("Введите слово...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     inner()

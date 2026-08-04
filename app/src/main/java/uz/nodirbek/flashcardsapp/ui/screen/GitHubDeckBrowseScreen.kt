@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.draw.clip
@@ -37,6 +36,8 @@ import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportResult
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckCard
 import uz.nodirbek.flashcardsapp.domain.model.Card
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.components.DeckPickerSection
+import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 import java.io.File
@@ -243,6 +244,11 @@ fun GitHubDeckBrowseScreen(
             allDecks = allDecks,
             selectedDeckId = selectedDeckId,
             onSelectDeck = { selectedDeckId = it },
+            onCreateDeck = { name ->
+                val id = java.util.UUID.randomUUID().toString()
+                viewModel.addDeckWithId(id, name)
+                selectedDeckId = id
+            },
             onImport = onCardsImported,
             onCancel = { preview = null }
         )
@@ -251,13 +257,11 @@ fun GitHubDeckBrowseScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("GitHub Decks", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+            UnifiedAppBar(
+                title = "GitHub Decks",
+                onBackClick = onBackClick,
+                showBackButton = true,
+                showDivider = true
             )
         }
     ) { padding ->
@@ -421,19 +425,17 @@ private fun GitHubPreviewSheet(
     allDecks: List<DeckWithStats>,
     selectedDeckId: String?,
     onSelectDeck: (String) -> Unit,
+    onCreateDeck: (String) -> Unit,
     onImport: (List<Card>) -> Unit,
     onCancel: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            @OptIn(ExperimentalMaterial3Api::class)
-            TopAppBar(
-                title = { Text("Предпросмотр", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onCancel) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+            UnifiedAppBar(
+                title = "Предпросмотр",
+                onBackClick = onCancel,
+                showBackButton = true,
+                showDivider = true
             )
         }
     ) { padding ->
@@ -482,41 +484,13 @@ private fun GitHubPreviewSheet(
             }
 
             item {
-                if (allDecks.isEmpty()) {
-                    Text(
-                        "Нет колод. Создайте колоду перед импортом.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        allDecks.forEach { d ->
-                            val isSelected = selectedDeckId == d.deck.id
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surface
-                                    )
-                                    .border(
-                                        1.5.dp,
-                                        if (isSelected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outlineVariant,
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { onSelectDeck(d.deck.id) }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                if (isSelected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Text(d.deck.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                }
+                DeckPickerSection(
+                    allDecks = allDecks,
+                    selectedDeckId = selectedDeckId,
+                    onSelectDeck = onSelectDeck,
+                    onCreateDeck = onCreateDeck,
+                    suggestedName = result.deckName
+                )
             }
 
             item {
