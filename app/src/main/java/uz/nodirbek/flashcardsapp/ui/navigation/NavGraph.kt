@@ -90,7 +90,8 @@ fun NavGraph(
                 SettingsScreen(
                     viewModel = homeViewModel,
                     onBackClick = { navController.popBackStack() },
-                    onImportClick = { navController.navigate(Screen.Import.route) }
+                    onImportClick = { navController.navigate(Screen.Import.route) },
+                    onNavigateToDeleted = { navController.navigate(Screen.RecentlyDeleted.route) }
                 )
             }
 
@@ -348,6 +349,20 @@ fun NavGraph(
                             popUpTo(Screen.UnitResult.route) { inclusive = true }
                         }
                     }
+                )
+            }
+
+            // ── Recently Deleted ──────────────────────────────────────────────
+            composable(
+                Screen.RecentlyDeleted.route,
+                enterTransition = { SideModalTransitions.enter() },
+                exitTransition = { UnderlyingScreenTransitions.exit() },
+                popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
+                popExitTransition = { SideModalTransitions.popExit() }
+            ) {
+                RecentlyDeletedScreen(
+                    viewModel = homeViewModel,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 

@@ -65,6 +65,7 @@ sealed class Screen(val route: String) {
     }
 
     // ── Misc ──────────────────────────────────────────────────────────
+    object RecentlyDeleted : Screen("recently-deleted")
     object Import : Screen("import")
     object BrowseSource : Screen("browse-source")
     object AnkiWebBrowse : Screen("anki-web-browse")

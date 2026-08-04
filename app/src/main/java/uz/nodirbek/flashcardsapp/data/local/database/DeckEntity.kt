@@ -15,5 +15,7 @@ data class DeckEntity(
     val isPinned: Boolean = false,
     val pinnedAt: Long = 0L,
     val sortOrder: Int = 0,
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false,
+    val deletedAt: Long = 0L
 )

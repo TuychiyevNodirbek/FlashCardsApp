@@ -5,6 +5,26 @@ import uz.nodirbek.flashcardsapp.domain.model.DailyStats
 import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.model.Achievement
 
+data class DeletedDeckItem(
+    val deck: Deck,
+    val cardCount: Int,
+    val deletedAt: Long
+)
+
+/**
+ * Пачка карточек, удалённая одной операцией (юнит) из живой колоды.
+ * Юниты вычисляемые, поэтому «удалённый юнит» опознаётся не по индексу,
+ * а по группе карточек с общим deckId и меткой времени удаления.
+ */
+data class DeletedCardBatch(
+    val deckId: String,
+    val deckName: String,
+    val cards: List<Card>,
+    val deletedAt: Long
+) {
+    val id: String get() = "$deckId@$deletedAt"
+}
+
 data class DeckWithStats(
     val deck: Deck,
     val totalCards: Int = 0,
@@ -36,7 +56,9 @@ data class HomeUiState(
     val ttsSpeed: Float = 1f,
     val unlockedAchievements: Set<String> = emptySet(),
     val rawNewCount: Int = 0,
-    val rawReviewCount: Int = 0
+    val rawReviewCount: Int = 0,
+    val deletedDecks: List<DeletedDeckItem> = emptyList(),
+    val deletedCardBatches: List<DeletedCardBatch> = emptyList()
 ) {
     val todayNewCount get() = minOf(rawNewCount, dailyNewLimit)
     val todayReviewCount get() = minOf(rawReviewCount, dailyReviewLimit)

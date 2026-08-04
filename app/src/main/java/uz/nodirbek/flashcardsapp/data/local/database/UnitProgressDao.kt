@@ -16,4 +16,10 @@ interface UnitProgressDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(progress: UnitProgressEntity)
+
+    @Query("SELECT * FROM unit_progress WHERE deckId = :deckId ORDER BY unitIndex ASC")
+    suspend fun getAllForDeckOnce(deckId: String): List<UnitProgressEntity>
+
+    @Query("DELETE FROM unit_progress WHERE deckId = :deckId")
+    suspend fun deleteAllForDeck(deckId: String)
 }

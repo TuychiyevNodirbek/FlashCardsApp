@@ -11,7 +11,9 @@ data class Card(
     val dueDate: String,
     val lastReviewed: String? = null,
     val createdAt: Long,
-    val lapses: Int = 0
+    val lapses: Int = 0,
+    val isDeleted: Boolean = false,
+    val deletedAt: Long = 0L
 )
 
 fun Card.isNew() = lastReviewed == null

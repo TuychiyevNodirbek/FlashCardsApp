@@ -202,7 +202,15 @@ fun DeckScreen(
                     onStartReview = { onNavigateToSrs(deckId) },
                     onAddSubRow = { showAddSubRowDialog = true },
                     onSubRowLongPress = { managingSubRow = it },
-                    onAddWords = { showAddCardSheet = true }
+                    onAddWords = { showAddCardSheet = true },
+                    onDeleteUnit = { unitDeckId, unitIndex ->
+                        scope.launch {
+                            unitRepository.deleteUnit(unitDeckId, unitIndex)
+                            snackbar.show(
+                                SnackbarData("Юнит удалён · вернуть можно в настройках", icon = "🗑️", color = FdRed)
+                            )
+                        }
+                    }
                 )
 
                 DeckTab.WORDS -> WordsTabContent(

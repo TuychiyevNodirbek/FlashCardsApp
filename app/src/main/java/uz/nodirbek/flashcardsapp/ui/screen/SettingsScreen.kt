@@ -57,7 +57,8 @@ private val TTS_LANGS = listOf(
 fun SettingsScreen(
     viewModel: HomeViewModel,
     onBackClick: () -> Unit = {},
-    onImportClick: () -> Unit = {}
+    onImportClick: () -> Unit = {},
+    onNavigateToDeleted: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -284,6 +285,33 @@ fun SettingsScreen(
                         Column {
                             Text("Импортировать CSV", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = FdPrimary)
                             Text("Загрузить карточки из файла", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                SettingsGroup {
+                    val deletedCount = uiState.deletedDecks.size + uiState.deletedCardBatches.size
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable(onClick = onNavigateToDeleted)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🗑️", fontSize = 20.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Недавно удалённые", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(if (deletedCount > 0) "Колоды и юниты · $deletedCount" else "Пусто", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (deletedCount > 0) {
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(FdRedLight)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text("$deletedCount", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = FdRed)
+                            }
                         }
                     }
                 }

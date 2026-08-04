@@ -1,6 +1,9 @@
 package uz.nodirbek.flashcardsapp.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -23,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
  * В спокойном состоянии имеет нижнюю границу-тень [shadowDp] пикселей цвета [shadowColor].
  * При нажатии смещается на [shadowDp] вниз и граница исчезает (1dp).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PressButton(
     onClick: () -> Unit,
@@ -32,6 +36,7 @@ fun PressButton(
     shape: Shape = RoundedCornerShape(14.dp),
     shadowDp: Dp = 4.dp,
     enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -40,17 +45,40 @@ fun PressButton(
     val currentOffset = if (isPressed) shadowDp else 0.dp
     val currentShadow = if (isPressed) 1.dp else shadowDp
 
-    Surface(
-        onClick = onClick,
-        modifier = modifier.offset(y = currentOffset),
-        shape = shape,
-        color = color,
-        border = BorderStroke(currentShadow, shadowColor),
-        enabled = enabled,
-        interactionSource = interactionSource
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            content()
+    if (onLongClick != null) {
+        // Surface(onClick = …) не умеет long-press, поэтому при наличии onLongClick
+        // берём немодальный Surface и вешаем combinedClickable вручную.
+        Surface(
+            modifier = modifier
+                .offset(y = currentOffset)
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    enabled = enabled,
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+            shape = shape,
+            color = color,
+            border = BorderStroke(currentShadow, shadowColor)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                content()
+            }
+        }
+    } else {
+        Surface(
+            onClick = onClick,
+            modifier = modifier.offset(y = currentOffset),
+            shape = shape,
+            color = color,
+            border = BorderStroke(currentShadow, shadowColor),
+            enabled = enabled,
+            interactionSource = interactionSource
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                content()
+            }
         }
     }
 }

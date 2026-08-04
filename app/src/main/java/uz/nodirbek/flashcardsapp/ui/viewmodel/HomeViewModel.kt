@@ -23,6 +23,8 @@ import uz.nodirbek.flashcardsapp.domain.model.Deck
 import uz.nodirbek.flashcardsapp.domain.model.isDueReview
 import uz.nodirbek.flashcardsapp.domain.model.isNew
 import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.state.DeletedCardBatch
+import uz.nodirbek.flashcardsapp.ui.state.DeletedDeckItem
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.state.HomeUiState
 import java.time.LocalTime
@@ -85,6 +87,43 @@ class HomeViewModel(
         viewModelScope.launch { preferencesDataStore.ttsLang.collect { v -> _uiState.update { it.copy(ttsLang = v) } } }
         viewModelScope.launch { preferencesDataStore.ttsSpeed.collect { v -> _uiState.update { it.copy(ttsSpeed = v) } } }
         viewModelScope.launch { preferencesDataStore.unlockedAchievements.collect { a -> _uiState.update { it.copy(unlockedAchievements = a) } } }
+        viewModelScope.launch {
+            combine(
+                deckRepository.getDeletedDecks(),
+                cardRepository.getDeletedCards(),
+                deckRepository.getAllDecks()
+            ) { deletedDecks, deletedCards, liveDecks ->
+                val deletedDeckIds = deletedDecks.map { it.id }.toSet()
+
+                val deckItems = deletedDecks.map { deck ->
+                    DeletedDeckItem(
+                        deck = deck,
+                        cardCount = deletedCards.count { it.deckId == deck.id },
+                        deletedAt = deck.deletedAt
+                    )
+                }.sortedByDescending { it.deletedAt }
+
+                // Карточки из ЖИВЫХ колод — это удалённые юниты; группируем их
+                // по (колода, момент удаления): одна операция = одна пачка.
+                val batches = deletedCards
+                    .filter { it.deckId !in deletedDeckIds }
+                    .groupBy { it.deckId to it.deletedAt }
+                    .map { (key, cards) ->
+                        val (batchDeckId, deletedAt) = key
+                        DeletedCardBatch(
+                            deckId = batchDeckId,
+                            deckName = liveDecks.firstOrNull { it.id == batchDeckId }?.name ?: "Колода",
+                            cards = cards,
+                            deletedAt = deletedAt
+                        )
+                    }
+                    .sortedByDescending { it.deletedAt }
+
+                deckItems to batches
+            }.collect { (deckItems, batches) ->
+                _uiState.update { it.copy(deletedDecks = deckItems, deletedCardBatches = batches) }
+            }
+        }
     }
 
     private fun buildDeckTree(decks: List<Deck>, cards: List<Card>): List<DeckWithStats> {
@@ -207,19 +246,61 @@ class HomeViewModel(
 
     fun deleteDeck(deck: Deck) {
         viewModelScope.launch {
-            // Collect all descendant deck IDs before deleting anything
             val allIds = getDeckWithDescendantIds(deck.id)
             allIds.forEach { id ->
-                cardRepository.deleteCardsByDeck(id)
-                if (id == deck.id) {
-                    deckRepository.deleteDeck(deck)
-                } else {
-                    val childDeck = _uiState.value.decks
-                        .flatMap { listOf(it) + collectAll(it.children) }
-                        .firstOrNull { it.deck.id == id }?.deck
-                    if (childDeck != null) deckRepository.deleteDeck(childDeck)
+                cardRepository.softDeleteCardsByDeck(id)
+                deckRepository.softDeleteDeck(id)
+            }
+        }
+    }
+
+    fun restoreDeck(deck: Deck) {
+        viewModelScope.launch {
+            // Restore the deck + all deleted child decks that belong to it
+            val toRestore = mutableListOf(deck.id)
+            val deleted = _uiState.value.deletedDecks.map { it.deck }
+            fun collectDeletedChildren(parentId: String) {
+                deleted.filter { it.parentId == parentId }.forEach { child ->
+                    toRestore.add(child.id)
+                    collectDeletedChildren(child.id)
                 }
             }
+            collectDeletedChildren(deck.id)
+            toRestore.forEach { id ->
+                cardRepository.restoreCardsByDeck(id)
+                deckRepository.restoreDeck(id)
+            }
+        }
+    }
+
+    fun permanentlyDeleteDeck(deck: Deck) {
+        viewModelScope.launch {
+            val toDelete = mutableListOf(deck.id)
+            val deleted = _uiState.value.deletedDecks.map { it.deck }
+            fun collectDeletedChildren(parentId: String) {
+                deleted.filter { it.parentId == parentId }.forEach { child ->
+                    toDelete.add(child.id)
+                    collectDeletedChildren(child.id)
+                }
+            }
+            collectDeletedChildren(deck.id)
+            toDelete.forEach { id ->
+                cardRepository.permanentlyDeleteCardsByDeck(id)
+                deckRepository.permanentlyDeleteDeckById(id)
+            }
+        }
+    }
+
+    /** Восстановить удалённый юнит — карточки возвращаются в свою колоду и заново разбиваются на юниты. */
+    fun restoreCardBatch(batch: DeletedCardBatch) {
+        viewModelScope.launch {
+            cardRepository.restoreCardsByIds(batch.cards.map { it.id })
+        }
+    }
+
+    fun permanentlyDeleteCardBatch(batch: DeletedCardBatch) {
+        viewModelScope.launch {
+            cardRepository.permanentlyDeleteCardsByIds(batch.cards.map { it.id })
         }
     }
 

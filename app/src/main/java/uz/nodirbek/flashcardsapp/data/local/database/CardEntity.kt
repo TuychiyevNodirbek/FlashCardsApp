@@ -19,5 +19,7 @@ data class CardEntity(
     val lastReviewed: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val lapses: Int = 0
+    val lapses: Int = 0,
+    val isDeleted: Boolean = false,
+    val deletedAt: Long = 0L
 )

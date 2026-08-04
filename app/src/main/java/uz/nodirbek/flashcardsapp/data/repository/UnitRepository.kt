@@ -3,6 +3,7 @@ package uz.nodirbek.flashcardsapp.data.repository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import uz.nodirbek.flashcardsapp.data.local.database.CardDao
@@ -90,6 +91,33 @@ class UnitRepository(
             }
             combine(subRowFlows) { rows -> rows.filterNotNull() }
         }
+
+    /**
+     * Удаляет юнит вместе с его карточками (soft-delete — восстанавливается
+     * из «Недавно удалённых»).
+     *
+     * Юниты вычисляемые: [getUnits] режет карточки колоды на чанки, а `unit_progress`
+     * хранит прогресс по ИНДЕКСУ чанка. Поэтому после удаления карточек юнита
+     * оставшиеся чанки сдвигаются влево, и прогресс нужно пересобрать: строку
+     * удалённого юнита выбросить, а всё, что было правее, сдвинуть на -1.
+     * Пересобираем через delete-all + re-insert, а не UPDATE ... unitIndex - 1,
+     * потому что (deckId, unitIndex) — первичный ключ, и порядок построчного
+     * апдейта мог бы транзитно нарушить его уникальность.
+     */
+    suspend fun deleteUnit(deckId: String, unitIndex: Int) {
+        val entities = cardDao.getCardsByDeck(deckId).first()
+        val sorted = entities.sortedWith(compareBy({ it.createdAt }, { it.id }))
+        val chunks = buildChunks(sorted.map { it.toDomain() })
+        val chunk = chunks.getOrNull(unitIndex) ?: return
+
+        cardDao.softDeleteCardsByIds(chunk.map { it.id }, System.currentTimeMillis())
+
+        val shifted = unitProgressDao.getAllForDeckOnce(deckId)
+            .filter { it.unitIndex != unitIndex }
+            .map { if (it.unitIndex > unitIndex) it.copy(unitIndex = it.unitIndex - 1) else it }
+        unitProgressDao.deleteAllForDeck(deckId)
+        shifted.forEach { unitProgressDao.upsert(it) }
+    }
 
     suspend fun saveProgress(
         deckId: String,

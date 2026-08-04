@@ -27,6 +27,11 @@ class DeckRepository(private val deckDao: DeckDao) {
 
     suspend fun deleteDeck(deck: Deck) = deckDao.deleteDeck(deck.toEntity())
 
+    suspend fun softDeleteDeck(id: String) = deckDao.softDeleteDeck(id, System.currentTimeMillis())
+    suspend fun restoreDeck(id: String) = deckDao.restoreDeck(id)
+    fun getDeletedDecks(): Flow<List<Deck>> = deckDao.getDeletedDecks().map { it.map(DeckEntity::toDomain) }
+    suspend fun permanentlyDeleteDeckById(id: String) = deckDao.permanentlyDeleteDeckById(id)
+
     fun getCardCount(deckId: String): Flow<Int> = deckDao.getCardCountForDeck(deckId)
     fun getNewCount(deckId: String): Flow<Int> = deckDao.getNewCardCountForDeck(deckId)
     fun getLearningCount(deckId: String): Flow<Int> = deckDao.getLearningCardCountForDeck(deckId)
@@ -42,7 +47,9 @@ private fun DeckEntity.toDomain(): Deck = Deck(
     isPinned = isPinned,
     pinnedAt = pinnedAt,
     sortOrder = sortOrder,
-    updatedAt = updatedAt
+    updatedAt = updatedAt,
+    isDeleted = isDeleted,
+    deletedAt = deletedAt
 )
 
 private fun Deck.toEntity(): DeckEntity = DeckEntity(
@@ -54,5 +61,7 @@ private fun Deck.toEntity(): DeckEntity = DeckEntity(
     isPinned = isPinned,
     pinnedAt = pinnedAt,
     sortOrder = sortOrder,
-    updatedAt = updatedAt
+    updatedAt = updatedAt,
+    isDeleted = isDeleted,
+    deletedAt = deletedAt
 )

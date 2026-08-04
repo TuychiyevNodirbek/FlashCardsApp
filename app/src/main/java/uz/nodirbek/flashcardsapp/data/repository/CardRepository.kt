@@ -46,6 +46,25 @@ class CardRepository(private val cardDao: CardDao) {
     suspend fun deleteCardsByDeck(deckId: String) = cardDao.deleteCardsByDeck(deckId)
 
     suspend fun deleteOrphanedCards() = cardDao.deleteOrphanedCards()
+
+    suspend fun softDeleteCardsByDeck(deckId: String) =
+        cardDao.softDeleteCardsByDeck(deckId, System.currentTimeMillis())
+
+    suspend fun restoreCardsByDeck(deckId: String) = cardDao.restoreCardsByDeck(deckId)
+
+    fun getDeletedCards(): Flow<List<Card>> =
+        cardDao.getDeletedCards().map { it.map(CardEntity::toDomainModel) }
+
+    suspend fun permanentlyDeleteCardsByDeck(deckId: String) =
+        cardDao.permanentlyDeleteCardsByDeck(deckId)
+
+    suspend fun softDeleteCardsByIds(ids: List<String>) =
+        cardDao.softDeleteCardsByIds(ids, System.currentTimeMillis())
+
+    suspend fun restoreCardsByIds(ids: List<String>) = cardDao.restoreCardsByIds(ids)
+
+    suspend fun permanentlyDeleteCardsByIds(ids: List<String>) =
+        cardDao.permanentlyDeleteCardsByIds(ids)
 }
 
 private fun CardEntity.toDomainModel(): Card = Card(
@@ -59,7 +78,9 @@ private fun CardEntity.toDomainModel(): Card = Card(
     dueDate = dueDate,
     lastReviewed = lastReviewed,
     createdAt = createdAt,
-    lapses = lapses
+    lapses = lapses,
+    isDeleted = isDeleted,
+    deletedAt = deletedAt
 )
 
 private fun Card.toEntity(): CardEntity = CardEntity(
@@ -73,5 +94,7 @@ private fun Card.toEntity(): CardEntity = CardEntity(
     dueDate = dueDate,
     lastReviewed = lastReviewed,
     createdAt = createdAt,
-    lapses = lapses
+    lapses = lapses,
+    isDeleted = isDeleted,
+    deletedAt = deletedAt
 )

@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,10 +48,14 @@ fun DeckPathContent(
     onAddSubRow: () -> Unit,
     onSubRowLongPress: (Deck) -> Unit,
     onAddWords: () -> Unit,
+    onDeleteUnit: (deckId: String, unitIndex: Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val path by unitRepository.getPath(courseDeckId).collectAsState(initial = null)
     val sections = path ?: return
+
+    // Юнит, для которого открыто подтверждение удаления: (deckId, unit)
+    var unitPendingDelete by remember { mutableStateOf<Pair<String, StudyUnit>?>(null) }
 
     val totalUnits = sections.sumOf { it.units.size }
     if (totalUnits == 0 && sections.none { it.deck.id != courseDeckId }) {
@@ -128,7 +134,8 @@ fun DeckPathContent(
                         UnitNode(
                             unit = unit,
                             zigzagIndex = unit.index,
-                            onClick = { onOpenUnit(section.deck.id, unit.index) }
+                            onClick = { onOpenUnit(section.deck.id, unit.index) },
+                            onLongClick = { unitPendingDelete = section.deck.id to unit }
                         )
                     }
                 }
@@ -153,6 +160,38 @@ fun DeckPathContent(
                 )
             }
         }
+    }
+
+    unitPendingDelete?.let { (sectionDeckId, unit) ->
+        AlertDialog(
+            onDismissRequest = { unitPendingDelete = null },
+            title = {
+                Text(
+                    "Удалить юнит ${unit.index + 1}?",
+                    fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold
+                )
+            },
+            text = {
+                Text(
+                    "${unit.cards.size} слов будут удалены вместе с юнитом. " +
+                        "Их можно вернуть из «Недавно удалённых» в настройках.",
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteUnit(sectionDeckId, unit.index)
+                    unitPendingDelete = null
+                }) {
+                    Text("Удалить", color = FdRed, fontFamily = OutfitFamily, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { unitPendingDelete = null }) {
+                    Text("Отмена", fontFamily = OutfitFamily)
+                }
+            }
+        )
     }
 }
 
@@ -235,7 +274,8 @@ private fun SubRowHeader(
 private fun UnitNode(
     unit: StudyUnit,
     zigzagIndex: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
 ) {
     // Зигзаг: 0, +36, 0, -36, 0, +36 ...
     val xOffset = when (zigzagIndex % 4) {
@@ -262,7 +302,9 @@ private fun UnitNode(
     ) {
         Box(Modifier.scale(scale)) {
             PressButton(
-                onClick = onClick,
+                // Заблокированный юнит нельзя открыть, но удалить (long-press) — можно,
+                // поэтому кнопку не выключаем, а гасим только сам onClick.
+                onClick = { if (!unit.locked) onClick() },
                 modifier = Modifier.size(72.dp),
                 color = when {
                     unit.completed -> FdGreen
@@ -276,7 +318,8 @@ private fun UnitNode(
                 },
                 shape = CircleShape,
                 shadowDp = 6.dp,
-                enabled = !unit.locked
+                enabled = !unit.locked || onLongClick != null,
+                onLongClick = onLongClick
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
