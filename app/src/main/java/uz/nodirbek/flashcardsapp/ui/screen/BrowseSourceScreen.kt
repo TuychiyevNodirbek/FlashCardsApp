@@ -48,15 +48,6 @@ private val sources = listOf(
         tags = listOf("Наука", "История", "География", "Компьютеры"),
         badge = "Без лимитов",
         badgeColor = Color(0xFF4CAF50)
-    ),
-    DeckSource(
-        id = "github",
-        emoji = "🐙",
-        name = "GitHub Decks",
-        description = "Поиск .apkg файлов в открытых репозиториях GitHub. Тысячи готовых колод от разработчиков со всего мира.",
-        tags = listOf("Языки", "Программирование", "Математика", "Химия"),
-        badge = "Открытый код",
-        badgeColor = Color(0xFF9C27B0)
     )
 )
 
@@ -65,8 +56,7 @@ private val sources = listOf(
 fun BrowseSourceScreen(
     onBackClick: () -> Unit,
     onSelectAnkiWeb: () -> Unit,
-    onSelectOpenTDB: () -> Unit,
-    onSelectGitHub: () -> Unit
+    onSelectOpenTDB: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -100,7 +90,6 @@ fun BrowseSourceScreen(
                         when (source.id) {
                             "ankiweb" -> onSelectAnkiWeb()
                             "opentdb" -> onSelectOpenTDB()
-                            "github" -> onSelectGitHub()
                         }
                     }
                 )

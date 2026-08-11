@@ -70,7 +70,6 @@ sealed class Screen(val route: String) {
     object BrowseSource : Screen("browse-source")
     object AnkiWebBrowse : Screen("anki-web-browse")
     object OpenTDBBrowse : Screen("opentdb-browse")
-    object GitHubDeckBrowse : Screen("github-deck-browse")
 
     companion object {
         val bottomNavRoots = setOf(Home.route, Stats.route, Settings.route)

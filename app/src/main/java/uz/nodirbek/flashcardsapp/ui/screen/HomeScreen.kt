@@ -468,7 +468,7 @@ private fun homeBanners(
     banners += HomeBanner(
         id = "promo_import",
         title = "Учись легко 📦",
-        subtitle = "Импортируй колоду из Anki, GitHub или CSV — тысячи слов за минуту",
+        subtitle = "Импортируй колоду из Anki или CSV — тысячи слов за минуту",
         style = BannerStyle.Promo(FdOrange, FdRed),
         action = BannerAction(
             label = "Открыть",
