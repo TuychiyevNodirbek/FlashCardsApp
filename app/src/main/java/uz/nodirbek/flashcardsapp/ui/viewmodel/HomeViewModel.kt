@@ -161,7 +161,7 @@ class HomeViewModel(
             try {
                 val today = RateCardUseCase.getTodayDate()
                 val card = cardRepository.getCardById(cardId) ?: return@launch
-                val updatedCard = rateCardUseCase(card, quality)
+                val updatedCard = rateCardUseCase(card, quality, today)
                 cardRepository.updateCard(updatedCard)
                 val isCorrect = quality >= 2
                 val isDoubleXp = isCorrect && (0 until 15).random() == 0

@@ -88,7 +88,7 @@ class UnitFlowViewModel(
                 if (newTotal > 0) {
                     statsRepository.recordReview(date = today, reviews = newTotal, correct = newCorrect)
                 }
-                // Инициализировать SM-2 для новых карточек юнита (reps == 0)
+                // Инициализировать планирование повторений для новых карточек юнита (reps == 0)
                 state.cards.filter { it.reps == 0 }.forEach { card ->
                     val rated = rateCardUseCase(card, quality = 2, todayDate = today)
                     cardRepository.updateCard(rated)

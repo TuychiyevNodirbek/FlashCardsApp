@@ -50,6 +50,8 @@ fun AudioContent(
     var revealed by remember { mutableStateOf(false) }
     var answeredCount by remember { mutableIntStateOf(0) }
     var correctCount by remember { mutableIntStateOf(0) }
+    // Если true — на весь юнит вместо озвучки показывается слово текстом (упражнение на чтение)
+    var audioDisabled by remember { mutableStateOf(false) }
 
     // Генерация 4 вариантов ответа для текущей карточки
     val options = remember(currentCard) {
@@ -58,8 +60,8 @@ fun AudioContent(
     }
 
     // Автовоспроизведение при смене карточки
-    LaunchedEffect(currentCard.id) {
-        tts.speak(currentCard.front, ttsLang, ttsSpeed)
+    LaunchedEffect(currentCard.id, audioDisabled) {
+        if (!audioDisabled) tts.speak(currentCard.front, ttsLang, ttsSpeed)
     }
 
     fun advance() {
@@ -95,26 +97,53 @@ fun AudioContent(
         ) {
             Spacer(Modifier.height(24.dp))
             Text(
-                "Прослушайте и выберите перевод",
+                if (audioDisabled) "Прочитайте и выберите перевод" else "Прослушайте и выберите перевод",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(20.dp))
 
-            // Кнопка воспроизведения
-            Box(
-                Modifier
-                    .size(96.dp)
-                    .clip(CircleShape)
-                    .background(FdPrimaryLight)
-                    .border(2.dp, FdPrimary.copy(alpha = 0.3f), CircleShape)
-                    .clickable { tts.speak(currentCard.front, ttsLang, ttsSpeed) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("🔊", fontSize = 40.sp)
+            if (audioDisabled) {
+                // Слово текстом вместо озвучки
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                        .padding(20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        currentCard.front,
+                        fontFamily = OutfitFamily, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp,
+                        color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                // Кнопка воспроизведения
+                Box(
+                    Modifier
+                        .size(96.dp)
+                        .clip(CircleShape)
+                        .background(FdPrimaryLight)
+                        .border(2.dp, FdPrimary.copy(alpha = 0.3f), CircleShape)
+                        .clickable { tts.speak(currentCard.front, ttsLang, ttsSpeed) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🔊", fontSize = 40.sp)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Нажмите для повтора", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Не могу слушать 🔇",
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = OutfitFamily, fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.clickable { audioDisabled = true }
+                )
             }
-            Spacer(Modifier.height(8.dp))
-            Text("Нажмите для повтора", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(Modifier.height(28.dp))
             Text(

@@ -80,7 +80,9 @@ private fun CardEntity.toDomainModel(): Card = Card(
     createdAt = createdAt,
     lapses = lapses,
     isDeleted = isDeleted,
-    deletedAt = deletedAt
+    deletedAt = deletedAt,
+    stability = stability,
+    difficulty = difficulty
 )
 
 private fun Card.toEntity(): CardEntity = CardEntity(
@@ -96,5 +98,7 @@ private fun Card.toEntity(): CardEntity = CardEntity(
     createdAt = createdAt,
     lapses = lapses,
     isDeleted = isDeleted,
-    deletedAt = deletedAt
+    deletedAt = deletedAt,
+    stability = stability,
+    difficulty = difficulty
 )

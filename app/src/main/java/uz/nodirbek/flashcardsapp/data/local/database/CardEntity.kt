@@ -21,5 +21,7 @@ data class CardEntity(
     val updatedAt: Long = System.currentTimeMillis(),
     val lapses: Int = 0,
     val isDeleted: Boolean = false,
-    val deletedAt: Long = 0L
+    val deletedAt: Long = 0L,
+    val stability: Float = 0f,
+    val difficulty: Float = 0f
 )

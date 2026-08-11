@@ -13,7 +13,11 @@ data class Card(
     val createdAt: Long,
     val lapses: Int = 0,
     val isDeleted: Boolean = false,
-    val deletedAt: Long = 0L
+    val deletedAt: Long = 0L,
+    /** FSRS: память "прочности" (в днях) — 0 значит, что FSRS ещё не инициализировал карточку. */
+    val stability: Float = 0f,
+    /** FSRS: сложность карточки, 1 (легко) .. 10 (сложно). */
+    val difficulty: Float = 0f
 )
 
 fun Card.isNew() = lastReviewed == null
