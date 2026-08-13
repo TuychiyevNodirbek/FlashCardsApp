@@ -1,0 +1,18 @@
+name: AI Code Review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: TuychiyevNodirbek/ai-code-review-action@v1
+        with:
+          api-url: ${{ secrets.REVIEW_API_URL }}
+          api-token: ${{ secrets.REVIEW_API_TOKEN }}
