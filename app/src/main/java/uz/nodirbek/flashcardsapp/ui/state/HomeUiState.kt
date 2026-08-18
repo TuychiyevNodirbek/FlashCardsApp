@@ -1,9 +1,9 @@
 package uz.nodirbek.flashcardsapp.ui.state
 
-import uz.nodirbek.flashcardsapp.domain.model.Card
-import uz.nodirbek.flashcardsapp.domain.model.DailyStats
-import uz.nodirbek.flashcardsapp.domain.model.Deck
-import uz.nodirbek.flashcardsapp.domain.model.Achievement
+import uz.nodirbek.flashcardsapp.shared.model.Card
+import uz.nodirbek.flashcardsapp.shared.model.DailyStats
+import uz.nodirbek.flashcardsapp.shared.model.Deck
+import uz.nodirbek.flashcardsapp.shared.model.Achievement
 
 data class DeletedDeckItem(
     val deck: Deck,

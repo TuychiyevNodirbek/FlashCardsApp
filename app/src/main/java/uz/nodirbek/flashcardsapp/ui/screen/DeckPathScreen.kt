@@ -27,10 +27,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import uz.nodirbek.flashcardsapp.data.repository.SubRowUnits
-import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
-import uz.nodirbek.flashcardsapp.domain.model.Deck
-import uz.nodirbek.flashcardsapp.domain.model.StudyUnit
+import uz.nodirbek.flashcardsapp.shared.data.repository.SubRowUnits
+import uz.nodirbek.flashcardsapp.shared.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.shared.model.Deck
+import uz.nodirbek.flashcardsapp.shared.model.StudyUnit
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 

@@ -11,16 +11,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import uz.nodirbek.flashcardsapp.AppContainer
 import uz.nodirbek.flashcardsapp.MainActivity
-import uz.nodirbek.flashcardsapp.data.local.preferences.PreferencesDataStore
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.data.local.PreferencesDataStore
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 
 class StreakWarningReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val dataStore = PreferencesDataStore(context)
+                val dataStore = PreferencesDataStore(AppContainer.dataStoreFor(context))
                 val lastActive = dataStore.lastActiveDate.first()
                 val today = RateCardUseCase.getTodayDate()
                 if (lastActive == today) return@launch  // already studied today, no warning needed

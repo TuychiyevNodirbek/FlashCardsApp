@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import uz.nodirbek.flashcardsapp.domain.usecase.GetForgettingEdgeCardsUseCase
+import uz.nodirbek.flashcardsapp.shared.scheduler.GetForgettingEdgeCardsUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel

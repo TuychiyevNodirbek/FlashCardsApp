@@ -9,11 +9,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import uz.nodirbek.flashcardsapp.data.repository.CardRepository
-import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
-import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
-import uz.nodirbek.flashcardsapp.domain.model.Card
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.data.repository.CardRepository
+import uz.nodirbek.flashcardsapp.shared.data.repository.StatsRepository
+import uz.nodirbek.flashcardsapp.shared.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.shared.model.Card
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 
 enum class FlowStep { FLASHCARDS, MATCH, TEST, AUDIO, SCRAMBLE, WRITE }
 

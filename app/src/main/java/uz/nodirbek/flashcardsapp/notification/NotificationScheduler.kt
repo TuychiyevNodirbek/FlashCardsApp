@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import java.util.Calendar
 
 class NotificationScheduler(private val context: Context) {

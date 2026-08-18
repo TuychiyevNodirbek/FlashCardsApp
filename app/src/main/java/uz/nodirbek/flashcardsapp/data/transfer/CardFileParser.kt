@@ -4,14 +4,11 @@ import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import uz.nodirbek.flashcardsapp.domain.model.Card
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.data.transfer.CardParseResult
+import uz.nodirbek.flashcardsapp.shared.data.transfer.parseCsvContent
+import uz.nodirbek.flashcardsapp.shared.model.Card
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import java.util.UUID
-
-sealed class CardParseResult {
-    data class Success(val cards: List<Card>) : CardParseResult()
-    data class Error(val message: String) : CardParseResult()
-}
 
 /** Parses CSV or .apkg files and returns a flat list of cards assigned to [deckId]. */
 suspend fun parseCardsFromUri(
@@ -62,52 +59,8 @@ private fun parseCsv(uri: Uri, context: Context, deckId: String): CardParseResul
         val content = inputStream.bufferedReader().readText()
         inputStream.close()
 
-        if (content.isBlank()) return CardParseResult.Error("Файл пустой")
-
-        val lines = content.lines().filter { it.isNotBlank() }
-        if (lines.size > 5000) return CardParseResult.Error("Файл слишком большой (макс. 5000 строк)")
-
-        val delimiter = detectCsvDelimiter(lines)
-        val today = RateCardUseCase.getTodayDate()
-        val cards = mutableListOf<Card>()
-
-        for (line in lines) {
-            val parts = line.split(delimiter).map { it.trim() }
-            if (parts.size >= 2) {
-                val front = parts[0]
-                val back = parts.drop(1).joinToString(", ")
-                if (front.isNotBlank() && back.isNotBlank()) {
-                    cards.add(
-                        Card(
-                            id = UUID.randomUUID().toString(),
-                            front = front,
-                            back = back,
-                            deckId = deckId,
-                            dueDate = today,
-                            createdAt = System.currentTimeMillis()
-                        )
-                    )
-                }
-            }
-        }
-
-        if (cards.isEmpty()) CardParseResult.Error("Не найдено подходящих пар в файле")
-        else CardParseResult.Success(cards)
+        parseCsvContent(content, deckId, RateCardUseCase.getTodayDate())
     } catch (e: Exception) {
         CardParseResult.Error("Ошибка: ${e.message}")
-    }
-}
-
-private fun detectCsvDelimiter(lines: List<String>): Char {
-    var tabs = 0; var semis = 0; var commas = 0
-    for (line in lines.take(10)) {
-        tabs += line.count { it == '\t' }
-        semis += line.count { it == ';' }
-        commas += line.count { it == ',' }
-    }
-    return when {
-        tabs > semis && tabs > commas -> '\t'
-        semis > commas -> ';'
-        else -> ','
     }
 }

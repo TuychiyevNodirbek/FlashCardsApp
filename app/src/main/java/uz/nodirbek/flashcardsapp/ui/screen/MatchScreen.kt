@@ -100,7 +100,7 @@ fun MatchScreen(
 
 @Composable
 fun MatchContent(
-    cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
+    cards: List<uz.nodirbek.flashcardsapp.shared.model.Card>,
     onBackClick: () -> Unit,
     onFinished: (seconds: Int, isNewRecord: Boolean, bestSeconds: Int) -> Unit,
     showTopBar: Boolean = true,

@@ -36,8 +36,8 @@ import uz.nodirbek.flashcardsapp.data.transfer.DeckTransferRepository
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckFile
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckParseException
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckVersionException
-import uz.nodirbek.flashcardsapp.domain.model.Card
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.model.Card
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.HtmlText
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*

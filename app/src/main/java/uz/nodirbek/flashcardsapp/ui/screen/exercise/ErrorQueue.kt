@@ -1,6 +1,6 @@
 package uz.nodirbek.flashcardsapp.ui.screen.exercise
 
-import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.shared.model.Card
 
 /**
  * Очередь карточек с повторением ошибочных.

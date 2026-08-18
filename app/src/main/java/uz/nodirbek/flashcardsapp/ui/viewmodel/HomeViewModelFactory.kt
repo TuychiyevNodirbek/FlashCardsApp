@@ -2,11 +2,11 @@ package uz.nodirbek.flashcardsapp.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import uz.nodirbek.flashcardsapp.data.local.preferences.PreferencesDataStore
-import uz.nodirbek.flashcardsapp.data.repository.CardRepository
-import uz.nodirbek.flashcardsapp.data.repository.DeckRepository
-import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.data.local.PreferencesDataStore
+import uz.nodirbek.flashcardsapp.shared.data.repository.CardRepository
+import uz.nodirbek.flashcardsapp.shared.data.repository.DeckRepository
+import uz.nodirbek.flashcardsapp.shared.data.repository.StatsRepository
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 
 class HomeViewModelFactory(
     private val cardRepository: CardRepository,

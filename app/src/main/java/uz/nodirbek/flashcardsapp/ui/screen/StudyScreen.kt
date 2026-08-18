@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uz.nodirbek.flashcardsapp.domain.model.Achievement
-import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.shared.model.Achievement
+import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.ui.components.HtmlText
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*

@@ -159,7 +159,7 @@ private fun ResultStatBox(value: String, label: String, color: Color, modifier: 
 @Composable
 private fun TestResultsScreenPreview() {
     FlashCardsAppTheme {
-        fun previewCard(n: Int) = uz.nodirbek.flashcardsapp.domain.model.Card(
+        fun previewCard(n: Int) = uz.nodirbek.flashcardsapp.shared.model.Card(
             id = "$n", front = "Question $n", back = "Answer $n", dueDate = "", createdAt = 0L
         )
         val results = listOf(

@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import uz.nodirbek.flashcardsapp.domain.model.DailyStats
+import uz.nodirbek.flashcardsapp.shared.model.DailyStats
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 import java.time.LocalDate

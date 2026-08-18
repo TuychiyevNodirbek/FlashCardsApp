@@ -19,10 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import uz.nodirbek.flashcardsapp.data.repository.CardRepository
-import uz.nodirbek.flashcardsapp.data.repository.StatsRepository
-import uz.nodirbek.flashcardsapp.data.repository.UnitRepository
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.data.repository.CardRepository
+import uz.nodirbek.flashcardsapp.shared.data.repository.StatsRepository
+import uz.nodirbek.flashcardsapp.shared.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.screen.exercise.AudioContent
 import uz.nodirbek.flashcardsapp.ui.screen.exercise.ScrambleContent

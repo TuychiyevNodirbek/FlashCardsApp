@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.components.ProgressAppBar
@@ -55,12 +55,12 @@ fun TestScreen(
 
 @Composable
 fun TestContent(
-    cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
-    allCardsForDistractors: List<uz.nodirbek.flashcardsapp.domain.model.Card> = cards,
+    cards: List<uz.nodirbek.flashcardsapp.shared.model.Card>,
+    allCardsForDistractors: List<uz.nodirbek.flashcardsapp.shared.model.Card> = cards,
     isWritten: Boolean = false,
     onBackClick: () -> Unit,
     onDone: (correct: Int, total: Int) -> Unit,
-    onAnswerRecorded: ((card: uz.nodirbek.flashcardsapp.domain.model.Card, answer: String, correct: Boolean) -> Unit)? = null,
+    onAnswerRecorded: ((card: uz.nodirbek.flashcardsapp.shared.model.Card, answer: String, correct: Boolean) -> Unit)? = null,
     showTopBar: Boolean = true,
     modifier: Modifier = Modifier
 ) {

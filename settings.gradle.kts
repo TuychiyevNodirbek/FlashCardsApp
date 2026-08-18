@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "FlashCards App"
 include(":app")
+include(":shared")
  

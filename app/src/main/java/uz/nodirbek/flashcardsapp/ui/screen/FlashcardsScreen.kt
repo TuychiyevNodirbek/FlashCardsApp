@@ -59,7 +59,7 @@ fun FlashcardsScreen(
 
 @Composable
 fun FlashcardsContent(
-    cards: List<uz.nodirbek.flashcardsapp.domain.model.Card>,
+    cards: List<uz.nodirbek.flashcardsapp.shared.model.Card>,
     ttsLang: String = "en",
     ttsSpeed: Float = 1f,
     onDone: () -> Unit,

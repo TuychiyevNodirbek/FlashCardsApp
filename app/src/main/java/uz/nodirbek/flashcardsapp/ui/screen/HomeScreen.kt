@@ -46,8 +46,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import uz.nodirbek.flashcardsapp.R
 import uz.nodirbek.flashcardsapp.data.transfer.DeckShareHelper
 import uz.nodirbek.flashcardsapp.data.transfer.DeckTransferRepository
-import uz.nodirbek.flashcardsapp.domain.model.Deck
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.model.Deck
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import kotlin.math.ceil
 import uz.nodirbek.flashcardsapp.ui.components.BannerAction
 import uz.nodirbek.flashcardsapp.ui.components.BannerEmojiBadge
@@ -834,7 +834,7 @@ private fun BadgePreview() {
 private fun DeckRowPreview() {
     FlashCardsAppTheme {
         val testDeck = DeckWithStats(
-            deck = uz.nodirbek.flashcardsapp.domain.model.Deck("1", "Тестовая колода", colorHex = "#4255FF"),
+            deck = uz.nodirbek.flashcardsapp.shared.model.Deck("1", "Тестовая колода", colorHex = "#4255FF"),
             totalCards = 42,
             newCards = 10,
             dueCards = 5

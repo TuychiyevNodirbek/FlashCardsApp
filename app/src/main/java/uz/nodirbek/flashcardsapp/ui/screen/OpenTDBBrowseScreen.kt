@@ -23,8 +23,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import uz.nodirbek.flashcardsapp.data.transfer.FdeckCard
-import uz.nodirbek.flashcardsapp.domain.model.Card
-import uz.nodirbek.flashcardsapp.domain.usecase.RateCardUseCase
+import uz.nodirbek.flashcardsapp.shared.model.Card
+import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import android.util.Log
 import uz.nodirbek.flashcardsapp.ui.components.DeckPickerSection
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
