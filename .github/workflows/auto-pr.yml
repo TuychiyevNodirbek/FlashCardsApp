@@ -1,0 +1,31 @@
+name: Auto-create PR to main
+
+# Автоматически открывает PR в main при пуше любой ветки, кроме main.
+# Использует GH_PAT (Personal Access Token), а не стандартный GITHUB_TOKEN,
+# иначе GitHub не запустит другие workflow (в т.ч. ai-review.yml) на
+# событие pull_request от этого PR — это защита от рекурсии на уровне
+# платформы, которую обходит только PAT.
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  auto-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PR if not exists
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          EXISTING=$(gh pr list --repo "${{ github.repository }}" --head "$BRANCH" --base main --json number --jq 'length')
+          if [ "$EXISTING" = "0" ]; then
+            gh pr create --repo "${{ github.repository }}" \
+              --base main --head "$BRANCH" \
+              --title "test: $BRANCH" \
+              --body "Автоматически создан при push в ветку \`$BRANCH\`."
+          else
+            echo "PR для ветки $BRANCH уже существует, пропускаем."
+          fi

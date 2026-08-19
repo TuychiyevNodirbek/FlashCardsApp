@@ -151,7 +151,11 @@ class AnkiWebBrowser(context: Context) {
                 }
 
                 override fun onReceivedError(view: WebView, errorCode: Int, description: String?, failingUrl: String?) {
-                    Log.w(TAG, "fetchDetail() onReceivedError: sharedId=$sharedId code=$errorCode desc=$description url=$failingUrl")
+                    if (resumed) return
+                    resumed = true
+                    Log.e(TAG, "fetchDetail() onReceivedError: sharedId=$sharedId code=$errorCode desc=$description url=$failingUrl")
+                    cont.resumeWithException(AnkiWebException("Ошибка сети: $description"))
+                    mainHandler.post { webView.destroy() }
                 }
             }
             cont.invokeOnCancellation {
