@@ -3,7 +3,8 @@ package uz.nodirbek.flashcardsapp.data.repository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import uz.nodirbek.flashcardsapp.domain.model.Card
+import uz.nodirbek.flashcardsapp.shared.data.repository.UnitRepository
+import uz.nodirbek.flashcardsapp.shared.model.Card
 
 class UnitChunkingTest {
 

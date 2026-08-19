@@ -51,6 +51,8 @@ kapt {
 }
 
 dependencies {
+    implementation(project(":shared"))
+    implementation(project(":composeApp"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -62,7 +64,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.navigation.compose)
+    // ВАЖНО: не androidx.navigation:navigation-compose — NavGraph в :composeApp
+    // использует мультиплатформенный org.jetbrains.androidx.navigation, и NavHostController
+    // должен быть ОДНИМ и тем же типом по обе стороны вызова.
+    implementation(libs.jetbrains.navigation.compose)
 
     // Room
     implementation(libs.androidx.room.runtime)
