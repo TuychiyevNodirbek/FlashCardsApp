@@ -138,5 +138,7 @@ fun buildDatabase(builder: RoomDatabase.Builder<FlashCardsDatabase>): FlashCards
     builder
         .addMigrations(*ALL_MIGRATIONS)
         .setDriver(BundledSQLiteDriver())
-        .setQueryCoroutineContext(Dispatchers.IO)
+        // Dispatchers.IO не входит в общий (common) API kotlinx.coroutines — на Kotlin/Native
+        // он internal. Default — единственный корректно мультиплатформенный вариант здесь.
+        .setQueryCoroutineContext(Dispatchers.Default)
         .build()
