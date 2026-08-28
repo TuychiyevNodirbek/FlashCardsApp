@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.theme.*
+import kotlin.math.PI
 import kotlin.math.sin
 
 private val confettiColors = listOf(
@@ -168,7 +169,7 @@ private fun ConfettiOverlay() {
     Box(Modifier.fillMaxSize()) {
         pieces.forEach { piece ->
             val y = ((time * piece.speed + piece.phase) % 1f)
-            val x = piece.x + sin((time * 2f + piece.phase) * Math.PI.toFloat()) * 0.05f
+            val x = piece.x + sin((time * 2f + piece.phase) * PI.toFloat()) * 0.05f
             Box(
                 Modifier
                     .fillMaxSize()

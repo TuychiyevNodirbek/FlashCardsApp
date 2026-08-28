@@ -15,8 +15,15 @@ kotlin {
 
     // iosX64 (Intel-симулятор) не таргетируем: Compose Multiplatform 1.11.x
     // больше не публикует под него артефакты (задепрекейтили вместе с macosX64).
-    iosArm64()
-    iosSimulatorArm64()
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -46,6 +53,18 @@ kotlin {
 
 compose.resources {
     packageOfResClass = "uz.nodirbek.flashcardsapp.composeapp.generated.resources"
+}
+
+configurations.all {
+    resolutionStrategy {
+        // Compose Multiplatform Material3 (внутренний DatePicker) и/или haze тянут
+        // kotlinx-datetime:0.7.1 транзитивно, у которого Clock/Instant — typealias
+        // на kotlin.time.Clock/Instant из Kotlin 2.3+ stdlib (см. changelog
+        // kotlinx-datetime 0.7.0/0.7.1). На пином Kotlin 2.2.21 эти типы не
+        // резолвятся ("Unresolved reference 'System'") — фиксируем 0.6.1, на
+        // которой написан весь текущий код (Clock.System из самой kotlinx-datetime).
+        force("org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}")
+    }
 }
 
 android {

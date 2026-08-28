@@ -17,7 +17,7 @@ class ErrorQueue(cards: List<Card>) {
     fun isFirstAttempt(cardId: String): Boolean = (retryCount[cardId] ?: 0) == 0
 
     fun addError(card: Card) {
-        val count = retryCount.getOrDefault(card.id, 0)
+        val count = retryCount[card.id] ?: 0
         if (count < 2) {
             queue.addLast(card)
             retryCount[card.id] = count + 1
