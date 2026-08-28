@@ -1,16 +1,17 @@
 # Сборка и запуск FlashCardsApp в Xcode (iOS)
 
-> **Важно, прочитайте перед началом.** На данный момент это запускает только
-> минимальный smoke-test-экран (`App.kt`): онбординг-карусель, а после неё —
-> плейсхолдер-текст. Полноценная навигация, экран "Дом", изучение карточек,
-> статистика, уведомления и т.д. **пока недоступны на iOS** — `NavGraph`,
-> `AppContainer` (DI), `HomeViewModel`, `notification/`-пакет и
-> `AnkiWebBrowser` всё ещё живут в `composeApp/src/androidMain` и завязаны на
-> `android.content.Context`/`WorkManager`/`WebView`. Их перенос на iOS —
-> Фаза 6 миграции на KMP, ещё не начата. Этот гайд подтверждает, что весь
-> Compose Multiplatform стек (тема, шрифты, анимации, навигация внутри одного
-> экрана) реально рендерится на iOS, и даёт рабочий Xcode-проект как основу
-> для Фазы 6.
+> **Важно, прочитайте перед началом.** На iOS теперь работает **настоящая
+> навигация**: онбординг → список колод → детали колоды → SRS-повторение,
+> флеш-карточки, матч, тест, "грань забывания", прохождение юнита — все эти
+> экраны уже общие (`commonMain`) и полностью функциональны на iOS. **Пока
+> недоступны на iOS** (временные заглушки с кнопкой "Назад"): экран
+> "Настройки", импорт колод (файловые пикеры), поиск по AnkiWeb (WebView) и
+> Open Trivia DB (сетевой запрос) — они всё ещё используют Android-only API
+> (`Context`/`WebView`/`HttpURLConnection`) и разбираются на общую+
+> платформенную часть отдельно, в рамках Фазы 6. Уведомления
+> (`notification/`-пакет) и сетевой слой `AnkiWebBrowser` тоже пока
+> Android-only. Этот гайд даёт рабочий Xcode-проект, в котором реально можно
+> дойти от онбординга до изучения карточек на iOS-симуляторе.
 
 ## 0. Что уже готово в репозитории (сделано на Windows, эта сессия)
 
@@ -19,9 +20,12 @@ Xcode-проект нельзя ни создать, ни собрать на Wi
 подготовлена и проверена компиляцией (`:composeApp:compileKotlinIosSimulatorArm64`,
 `BUILD SUCCESSFUL`):
 
-- [`composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/App.kt`](../composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/App.kt) — корневой `@Composable fun App()`.
-- [`composeApp/src/iosMain/kotlin/uz/nodirbek/flashcardsapp/MainViewController.kt`](../composeApp/src/iosMain/kotlin/uz/nodirbek/flashcardsapp/MainViewController.kt) — `fun MainViewController(): UIViewController = ComposeUIViewController { App() }`, точка входа, которую дальше зовёт Swift.
-- В `composeApp/build.gradle.kts` добавлен блок `binaries.framework { baseName = "ComposeApp"; isStatic = true }` для `iosArm64`/`iosSimulatorArm64` — без него Gradle не создаёт `.framework`, который embed-ит Xcode.
+- [`composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/App.kt`](../composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/App.kt) — корневой `@Composable fun App(container: AppContainer, ...)`: онбординг → тема → `NavGraph`. Вызывается и Android'ом (`MainActivity`), и iOS (`MainViewController`) — единая точка входа вместо раньше дублированной логики.
+- [`composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/AppContainer.kt`](../composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/AppContainer.kt) — `expect class AppContainer` (DI-контейнер): Android-`actual` берёт `Context`, iOS-`actual` — нет (использует уже существующие iOS-actual для Room/DataStore из `:shared`).
+- [`composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/ui/navigation/NavGraph.kt`](../composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/ui/navigation/NavGraph.kt) — перенесён из `androidMain` в `commonMain` целиком.
+- [`composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/ui/navigation/PlatformScreens.kt`](../composeApp/src/commonMain/kotlin/uz/nodirbek/flashcardsapp/ui/navigation/PlatformScreens.kt) — `expect`-композаблы для 5 экранов, у которых пока нет общей реализации (Home/Settings/Import/AnkiWebBrowse/OpenTDBBrowse); iOS-`actual` для Home — настоящий работающий список колод, для остальных — заглушки.
+- [`composeApp/src/iosMain/kotlin/uz/nodirbek/flashcardsapp/MainViewController.kt`](../composeApp/src/iosMain/kotlin/uz/nodirbek/flashcardsapp/MainViewController.kt) — `fun MainViewController(): UIViewController = ComposeUIViewController { App(container = remember { AppContainer() }) }`, точка входа, которую дальше зовёт Swift.
+- В `composeApp/build.gradle.kts` — блок `binaries.framework { baseName = "ComposeApp"; isStatic = true }` для `iosArm64`/`iosSimulatorArm64` — без него Gradle не создаёт `.framework`, который embed-ит Xcode.
 
 Больше в KMP-модулях трогать не нужно — дальше всё делается в Xcode.
 
@@ -218,10 +222,10 @@ kotlinx-datetime только во внутренних `DatePicker`-компо�
 
 ## 9. Что дальше (Фаза 6)
 
-Этот гайд закрывает только smoke-test. Полноценный запуск потребует (не
-входит в объём этого документа):
-- Перенос `AppContainer` (DI) на общий intent без `android.content.Context` — либо через `expect`/`actual`-конструктор БД/DataStore (они уже есть в `:shared` для iOS), либо через отдельный iOS-контейнер.
-- `NavGraph`/`BottomNavBar` — уже есть общий `BottomNavBar` в `commonMain`, но `NavGraph.kt` вызывает Android-only экраны (`HomeScreen`, `SettingsScreen`, `ImportScreen`, `OpenTDBBrowseScreen`, `AnkiWebBrowseScreen`) — их нужно разобрать на общую часть + platform-specific врезки.
+`AppContainer` и `NavGraph` уже общие (см. раздел 0) — навигация и основной
+цикл изучения карточек на iOS работают. Осталось (не входит в объём этого
+документа):
+- Портировать 4 из 5 экранов, у которых пока только заглушка на iOS (`PlatformScreens.ios.kt`): **Настройки** (`SettingsScreen`), **Импорт колод** (`ImportScreen` — файловые пикеры), **поиск по AnkiWeb** (`AnkiWebBrowseScreen` — WebView-скрейпинг), **Open Trivia DB** (`OpenTDBBrowseScreen` — сетевой запрос). `PlatformHomeScreen` для iOS уже рабочий (упрощённый список колод), но со временем стоит сблизить с полной Android-версией `HomeScreen` (баннеры, streak, поиск).
 - TTS (`TtsManager.ios.kt` сейчас no-op-заглушка) → реализация через `AVSpeechSynthesizer`.
 - `HtmlText.ios.kt` (сейчас просто вырезает HTML-теги regex'ом) → полноценный рендеринг через `NSAttributedString`.
 - `CardImportLauncher.ios.kt` (сейчас no-op) → `UIDocumentPickerViewController`.

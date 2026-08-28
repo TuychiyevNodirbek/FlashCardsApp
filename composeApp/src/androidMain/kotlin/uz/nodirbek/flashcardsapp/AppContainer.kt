@@ -19,16 +19,16 @@ import androidx.datastore.preferences.core.Preferences
  * Единая точка сборки зависимостей приложения (вместо DI-фреймворка).
  * Создаётся один раз в MainActivity.
  */
-class AppContainer(context: Context) {
+actual class AppContainer(context: Context) {
     private val database = getOrCreateDatabase(context)
 
-    val cardRepository = CardRepository(database.cardDao())
-    val deckRepository = DeckRepository(database.deckDao())
-    val statsRepository = StatsRepository(database.dailyStatsDao())
-    val unitRepository = UnitRepository(database.cardDao(), database.unitProgressDao(), database.deckDao())
-    val preferencesDataStore = PreferencesDataStore(getOrCreateDataStore(context))
-    val rateCardUseCase = RateCardUseCase()
-    val deckTransferRepository = DeckTransferRepository(cardRepository, deckRepository)
+    actual val cardRepository = CardRepository(database.cardDao())
+    actual val deckRepository = DeckRepository(database.deckDao())
+    actual val statsRepository = StatsRepository(database.dailyStatsDao())
+    actual val unitRepository = UnitRepository(database.cardDao(), database.unitProgressDao(), database.deckDao())
+    actual val preferencesDataStore = PreferencesDataStore(getOrCreateDataStore(context))
+    actual val rateCardUseCase = RateCardUseCase()
+    actual val deckTransferRepository = DeckTransferRepository(cardRepository, deckRepository)
 
     companion object {
         // Room/DataStore не переживают повторное создание нескольких инстансов на один файл —

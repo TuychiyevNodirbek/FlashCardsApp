@@ -1,43 +1,91 @@
 package uz.nodirbek.flashcardsapp
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import uz.nodirbek.flashcardsapp.ui.navigation.NavGraph
 import uz.nodirbek.flashcardsapp.ui.screen.OnboardingScreen
 import uz.nodirbek.flashcardsapp.ui.theme.FlashCardsAppTheme
+import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 /**
- * Временная общая точка входа для iOS. NavGraph/AppContainer/HomeViewModel — androidMain-only
- * (завязаны на android.content.Context, WorkManager и т.д.), их перенос — Фаза 6, ещё не сделана.
- * Это лишь smoke-test-экран: подтверждает, что весь CMP-стек (тема, шрифты Outfit/Inter,
- * PressButton, HorizontalPager) реально рендерится на iOS-таргете.
+ * Общая точка входа приложения (Android: вызывается из MainActivity,
+ * iOS: из MainViewController). Собирает HomeViewModel из уже готового
+ * [AppContainer] (создаётся платформенным кодом — конструктор AppContainer
+ * платформенный, Android нужен Context, iOS — нет) и показывает
+ * онбординг → NavGraph, как раньше делал MainActivity напрямую.
+ *
+ * @param startDestination если задан, сразу после старта переходит на этот route
+ *   (используется Android-версией для deep-link'а "navigateToStudy" из уведомления)
  */
 @Composable
-fun App() {
-    val darkTheme = isSystemInDarkTheme()
-    var onboardingFinished by remember { mutableStateOf(false) }
+fun App(container: AppContainer, startDestination: String? = null) {
+    val homeViewModel = viewModel {
+        HomeViewModel(
+            cardRepository = container.cardRepository,
+            deckRepository = container.deckRepository,
+            statsRepository = container.statsRepository,
+            preferencesDataStore = container.preferencesDataStore,
+            rateCardUseCase = container.rateCardUseCase
+        )
+    }
+
+    val uiState by homeViewModel.uiState.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val darkTheme = when (uiState.theme) {
+        "light" -> false
+        "dark" -> true
+        else -> systemDark
+    }
+
+    // null = ещё загружается, false = нужно показать онбординг, true = уже видели
+    var onboardingSeen by remember { mutableStateOf<Boolean?>(null) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        onboardingSeen = container.preferencesDataStore.onboardingSeen.first()
+    }
 
     FlashCardsAppTheme(darkTheme = darkTheme) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            if (!onboardingFinished) {
-                OnboardingScreen(onFinish = { onboardingFinished = true })
-            } else {
-                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Полный экран приложения (навигация, данные) появится в Фазе 6.",
-                        style = MaterialTheme.typography.bodyLarge
+        Surface(
+            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            when (onboardingSeen) {
+                null -> {} // ждём DataStore
+                false -> OnboardingScreen(
+                    onFinish = {
+                        scope.launch {
+                            container.preferencesDataStore.setOnboardingSeen()
+                            onboardingSeen = true
+                        }
+                    }
+                )
+                true -> {
+                    val navController = rememberNavController()
+                    LaunchedEffect(Unit) {
+                        if (startDestination != null) {
+                            navController.navigate(startDestination)
+                        }
+                    }
+                    NavGraph(
+                        navController = navController,
+                        homeViewModel = homeViewModel,
+                        container = container
                     )
                 }
             }

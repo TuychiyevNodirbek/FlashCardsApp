@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import androidx.savedstate.read
 import uz.nodirbek.flashcardsapp.AppContainer
 import uz.nodirbek.flashcardsapp.ui.screen.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
@@ -60,7 +61,7 @@ fun NavGraph(
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
             ) {
-                HomeScreen(
+                PlatformHomeScreen(
                     viewModel = homeViewModel,
                     deckTransferRepository = container.deckTransferRepository,
                     onNavigateToStudy = { navController.navigate(Screen.SrsReview.createRoute(HomeViewModel.ALL_DECKS)) },
@@ -87,7 +88,7 @@ fun NavGraph(
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
             ) {
-                SettingsScreen(
+                PlatformSettingsScreen(
                     viewModel = homeViewModel,
                     onBackClick = { navController.popBackStack() },
                     onImportClick = { navController.navigate(Screen.Import.route) },
@@ -104,7 +105,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { DeckDetailTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.Deck.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.Deck.ARG) } ?: return@composable
                 DeckScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
@@ -130,7 +131,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { StudyTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.SrsReview.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.SrsReview.ARG) } ?: return@composable
                 StudyScreen(
                     viewModel = homeViewModel,
                     deckId = deckId,
@@ -150,7 +151,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { StudyTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.Flashcards.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.Flashcards.ARG) } ?: return@composable
                 FlashcardsScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
@@ -167,7 +168,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { GameSetupTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.TestSetup.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.TestSetup.ARG) } ?: return@composable
                 TestSetupScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
@@ -190,12 +191,12 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { GameSetupTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.Test.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.Test.ARG) } ?: return@composable
                 TestScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
-                    count = backStackEntry.arguments?.getInt(Screen.Test.ARG_COUNT) ?: 10,
-                    isWritten = backStackEntry.arguments?.getBoolean(Screen.Test.ARG_WRITTEN) ?: false,
+                    count = backStackEntry.arguments?.read { getIntOrNull(Screen.Test.ARG_COUNT) } ?: 10,
+                    isWritten = backStackEntry.arguments?.read { getBooleanOrNull(Screen.Test.ARG_WRITTEN) } ?: false,
                     onBackClick = { navController.popBackStack() },
                     onFinished = { results ->
                         testResults = results
@@ -229,7 +230,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { GameSetupTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.Match.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.Match.ARG) } ?: return@composable
                 MatchScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
@@ -270,7 +271,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { ForgettingEdgeTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.ForgettingEdge.ARG) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.ForgettingEdge.ARG) } ?: return@composable
                 ForgettingEdgeScreen(
                     deckId = deckId,
                     viewModel = homeViewModel,
@@ -291,8 +292,8 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { StudyTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.UnitFlow.ARG_DECK) ?: return@composable
-                val idx = backStackEntry.arguments?.getInt(Screen.UnitFlow.ARG_UNIT) ?: return@composable
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.UnitFlow.ARG_DECK) } ?: return@composable
+                val idx = backStackEntry.arguments?.read { getIntOrNull(Screen.UnitFlow.ARG_UNIT) } ?: return@composable
                 val ttsState by homeViewModel.uiState.collectAsState()
                 UnitFlowScreen(
                     deckId = deckId,
@@ -328,11 +329,11 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { ResultsTransitions.popExit() }
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString(Screen.UnitResult.ARG_DECK) ?: return@composable
-                val unitIndex = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_UNIT) ?: return@composable
-                val correct = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_CORRECT) ?: 0
-                val total = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_TOTAL) ?: 0
-                val xpEarned = backStackEntry.arguments?.getInt(Screen.UnitResult.ARG_XP) ?: 0
+                val deckId = backStackEntry.arguments?.read { getStringOrNull(Screen.UnitResult.ARG_DECK) } ?: return@composable
+                val unitIndex = backStackEntry.arguments?.read { getIntOrNull(Screen.UnitResult.ARG_UNIT) } ?: return@composable
+                val correct = backStackEntry.arguments?.read { getIntOrNull(Screen.UnitResult.ARG_CORRECT) } ?: 0
+                val total = backStackEntry.arguments?.read { getIntOrNull(Screen.UnitResult.ARG_TOTAL) } ?: 0
+                val xpEarned = backStackEntry.arguments?.read { getIntOrNull(Screen.UnitResult.ARG_XP) } ?: 0
                 val units by container.unitRepository.getUnits(deckId)
                     .collectAsState(initial = null)
                 UnitResultScreen(
@@ -374,7 +375,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { SideModalTransitions.popExit() }
             ) {
-                ImportScreen(
+                PlatformImportScreen(
                     viewModel = homeViewModel,
                     deckTransferRepository = container.deckTransferRepository,
                     onCardsImported = { cards ->
@@ -409,7 +410,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { SideModalTransitions.popExit() }
             ) {
-                AnkiWebBrowseScreen(
+                PlatformAnkiWebBrowseScreen(
                     viewModel = homeViewModel,
                     onCardsImported = { cards -> homeViewModel.addCards(cards) },
                     onBackClick = { navController.popBackStack() }
@@ -424,7 +425,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { SideModalTransitions.popExit() }
             ) {
-                OpenTDBBrowseScreen(
+                PlatformOpenTDBBrowseScreen(
                     viewModel = homeViewModel,
                     onCardsImported = { cards ->
                         homeViewModel.addCards(cards)
