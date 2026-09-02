@@ -425,7 +425,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { SideModalTransitions.popExit() }
             ) {
-                PlatformOpenTDBBrowseScreen(
+                OpenTDBBrowseScreen(
                     viewModel = homeViewModel,
                     onCardsImported = { cards ->
                         homeViewModel.addCards(cards)

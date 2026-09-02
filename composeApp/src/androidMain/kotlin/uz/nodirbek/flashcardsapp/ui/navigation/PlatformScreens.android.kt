@@ -31,7 +31,6 @@ import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.shared.model.Deck
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.screen.AnkiWebBrowseScreen
-import uz.nodirbek.flashcardsapp.ui.screen.OpenTDBBrowseScreen
 import uz.nodirbek.flashcardsapp.ui.theme.FdPrimary
 import uz.nodirbek.flashcardsapp.ui.theme.FdPrimaryDark
 import uz.nodirbek.flashcardsapp.ui.theme.FdRed
@@ -45,19 +44,6 @@ actual fun PlatformAnkiWebBrowseScreen(
     onBackClick: () -> Unit
 ) {
     AnkiWebBrowseScreen(
-        viewModel = viewModel,
-        onCardsImported = onCardsImported,
-        onBackClick = onBackClick
-    )
-}
-
-@Composable
-actual fun PlatformOpenTDBBrowseScreen(
-    viewModel: HomeViewModel,
-    onCardsImported: (List<Card>) -> Unit,
-    onBackClick: () -> Unit
-) {
-    OpenTDBBrowseScreen(
         viewModel = viewModel,
         onCardsImported = onCardsImported,
         onBackClick = onBackClick

@@ -41,13 +41,6 @@ actual fun PlatformAnkiWebBrowseScreen(
 ) = NotAvailableOnIosScreen("AnkiWeb", onBackClick)
 
 @Composable
-actual fun PlatformOpenTDBBrowseScreen(
-    viewModel: HomeViewModel,
-    onCardsImported: (List<Card>) -> Unit,
-    onBackClick: () -> Unit
-) = NotAvailableOnIosScreen("Open Trivia DB", onBackClick)
-
-@Composable
 actual fun PlatformDeckShareSheet(
     deck: Deck,
     transferRepository: DeckTransferRepository,

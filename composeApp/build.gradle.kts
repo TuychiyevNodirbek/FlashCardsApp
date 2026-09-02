@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -42,11 +43,19 @@ kotlin {
             implementation(libs.haze.materials)
             implementation(libs.androidx.datastore.preferences)
             implementation(libs.androidx.room.runtime)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
         androidMain.dependencies {
             implementation(libs.androidx.compose.ui.text.google.fonts)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
     }
 }

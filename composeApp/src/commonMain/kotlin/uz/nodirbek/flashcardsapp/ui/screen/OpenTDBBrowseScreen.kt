@@ -18,21 +18,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.url
+import io.ktor.http.decodeURLPart
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import uz.nodirbek.flashcardsapp.shared.data.transfer.FdeckCard
 import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
-import android.util.Log
 import uz.nodirbek.flashcardsapp.ui.components.DeckPickerSection
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLDecoder
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private data class TDBCategory(val id: Int, val emoji: String, val name: String)
 
@@ -52,55 +58,56 @@ private val CATEGORIES = listOf(
 
 private val COUNTS = listOf(20, 50, 100)
 
-private const val TAG = "OpenTDBBrowse"
+@Serializable
+private data class OpenTdbResponse(
+    val response_code: Int,
+    val results: List<OpenTdbQuestion> = emptyList()
+)
 
-private suspend fun fetchOpenTDB(categoryId: Int, count: Int): List<FdeckCard> =
-    withContext(Dispatchers.IO) {
-        val url = "https://opentdb.com/api.php?amount=$count&category=$categoryId&type=multiple&encode=url3986"
-        Log.d(TAG, "request: GET $url")
-        val conn = URL(url).openConnection() as HttpURLConnection
-        conn.setRequestProperty("User-Agent", "FlashCardsApp/1.0")
-        conn.connectTimeout = 10_000
-        conn.readTimeout = 15_000
-        val code = conn.responseCode
-        Log.d(TAG, "response: HTTP $code content-type=${conn.contentType} content-length=${conn.contentLength}")
-        if (code != 200) {
-            val err = conn.errorStream?.bufferedReader()?.readText().orEmpty()
-            Log.e(TAG, "response error body: $err")
-            conn.disconnect()
-            return@withContext emptyList()
-        }
-        val body = conn.inputStream.bufferedReader().readText()
-        conn.disconnect()
-        Log.d(TAG, "response body (first 300 chars): ${body.take(300)}")
+@Serializable
+private data class OpenTdbQuestion(
+    val question: String,
+    val correct_answer: String
+)
 
-        val root = JSONObject(body)
-        val responseCode = root.getInt("response_code")
-        Log.d(TAG, "opentdb response_code=$responseCode")
-        if (responseCode != 0) {
-            Log.e(TAG, "opentdb error: response_code=$responseCode (0=success,1=no results,2=invalid param,3=token not found,4=token empty,5=rate limit)")
-            return@withContext emptyList()
-        }
-        val arr = root.getJSONArray("results")
-        Log.d(TAG, "parsed: ${arr.length()} questions for categoryId=$categoryId")
-        (0 until arr.length()).map { i ->
-            val obj = arr.getJSONObject(i)
-            val q = URLDecoder.decode(obj.getString("question"), "UTF-8")
-            val a = URLDecoder.decode(obj.getString("correct_answer"), "UTF-8")
-            FdeckCard(front = q, back = a)
+private val openTdbClient by lazy {
+    HttpClient {
+        install(ContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
         }
     }
+}
 
+private suspend fun fetchOpenTDB(categoryId: Int, count: Int): List<FdeckCard> {
+    val response: OpenTdbResponse = openTdbClient.get {
+        url("https://opentdb.com/api.php")
+        header("User-Agent", "FlashCardsApp/1.0")
+        url.parameters.append("amount", count.toString())
+        url.parameters.append("category", categoryId.toString())
+        url.parameters.append("type", "multiple")
+        url.parameters.append("encode", "url3986")
+    }.body()
+
+    if (response.response_code != 0) return emptyList()
+    return response.results.map { q ->
+        FdeckCard(
+            front = q.question.decodeURLPart(),
+            back = q.correct_answer.decodeURLPart()
+        )
+    }
+}
+
+@OptIn(ExperimentalUuidApi::class)
 private fun List<FdeckCard>.toCards(deckId: String = "default"): List<Card> {
     val today = RateCardUseCase.getTodayDate()
     return map { c ->
         Card(
-            id = java.util.UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             front = c.front,
             back = c.back,
             deckId = deckId,
             dueDate = today,
-            createdAt = System.currentTimeMillis()
+            createdAt = Clock.System.now().toEpochMilliseconds()
         )
     }
 }
@@ -296,7 +303,8 @@ fun OpenTDBBrowseScreen(
                         selectedDeckId = selectedDeckId,
                         onSelectDeck = { selectedDeckId = it },
                         onCreateDeck = { name ->
-                            val id = java.util.UUID.randomUUID().toString()
+                            @OptIn(ExperimentalUuidApi::class)
+                            val id = Uuid.random().toString()
                             viewModel.addDeckWithId(id, name)
                             selectedDeckId = id
                         },
