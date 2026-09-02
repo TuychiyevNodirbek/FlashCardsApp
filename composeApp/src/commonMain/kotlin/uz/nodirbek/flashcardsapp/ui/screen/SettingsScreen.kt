@@ -1,11 +1,5 @@
 package uz.nodirbek.flashcardsapp.ui.screen
 
-import android.Manifest
-import android.app.TimePickerDialog
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,17 +14,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
-import uz.nodirbek.flashcardsapp.notification.NotificationScheduler
+import uz.nodirbek.flashcardsapp.ui.components.NotificationPermissionState
 import uz.nodirbek.flashcardsapp.ui.components.SnackbarData
+import uz.nodirbek.flashcardsapp.ui.components.TimePickerDialog
 import uz.nodirbek.flashcardsapp.ui.components.TopSnackbar
+import uz.nodirbek.flashcardsapp.ui.components.rememberNotificationPermissionState
+import uz.nodirbek.flashcardsapp.ui.components.rememberReminderScheduler
 import uz.nodirbek.flashcardsapp.ui.components.rememberSnackbarState
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.theme.*
@@ -61,21 +56,16 @@ fun SettingsScreen(
     onNavigateToDeleted: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    val notificationScheduler = remember { NotificationScheduler(context) }
+    val notificationScheduler = rememberReminderScheduler()
     var showResetConfirm by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
     val snackbar = rememberSnackbarState()
     val scope = rememberCoroutineScope()
 
-    fun hasNotificationPermission(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-    }
-    var permissionGranted by remember { mutableStateOf(hasNotificationPermission()) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        permissionGranted = granted
-        if (granted && uiState.reminderEnabled) {
+    val permissionState = rememberNotificationPermissionState()
+    val permissionGranted = permissionState.granted
+    LaunchedEffect(permissionGranted) {
+        if (permissionGranted && uiState.reminderEnabled) {
             notificationScheduler.scheduleReminder(uiState.reminderTime)
         }
     }
@@ -158,8 +148,8 @@ fun SettingsScreen(
                                 if (enabled) {
                                     if (permissionGranted) {
                                         notificationScheduler.scheduleReminder(uiState.reminderTime)
-                                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        permissionState.request()
                                     }
                                 } else {
                                     notificationScheduler.cancelReminder()
@@ -186,15 +176,7 @@ fun SettingsScreen(
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                                     .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        TimePickerDialog(context, { _, h, m ->
-                                            val newTime = "%02d:%02d".format(h, m)
-                                            viewModel.setReminderTime(newTime)
-                                            if (uiState.reminderEnabled && permissionGranted) {
-                                                notificationScheduler.scheduleReminder(newTime)
-                                            }
-                                        }, timeParts.first, timeParts.second, true).show()
-                                    }
+                                    .clickable { showTimePicker = true }
                                     .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -216,11 +198,7 @@ fun SettingsScreen(
                                     Box(
                                         Modifier.clip(RoundedCornerShape(8.dp))
                                             .background(FdOrange)
-                                            .clickable {
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                                else permissionGranted = true
-                                            }
+                                            .clickable { permissionState.request() }
                                             .padding(horizontal = 14.dp, vertical = 8.dp)
                                     ) {
                                         Text("Разрешить", fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
@@ -234,6 +212,21 @@ fun SettingsScreen(
                                     Text("Уведомления включены", fontSize = 12.sp, color = FdGreen)
                                 }
                             }
+                        }
+                        if (showTimePicker) {
+                            TimePickerDialog(
+                                initialHour = timeParts.first,
+                                initialMinute = timeParts.second,
+                                onDismiss = { showTimePicker = false },
+                                onConfirm = { h, m ->
+                                    val newTime = "${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}"
+                                    viewModel.setReminderTime(newTime)
+                                    if (uiState.reminderEnabled && permissionGranted) {
+                                        notificationScheduler.scheduleReminder(newTime)
+                                    }
+                                    showTimePicker = false
+                                }
+                            )
                         }
                     }
                 }

@@ -31,46 +31,12 @@ import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.shared.model.Deck
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.screen.AnkiWebBrowseScreen
-import uz.nodirbek.flashcardsapp.ui.screen.ImportScreen
 import uz.nodirbek.flashcardsapp.ui.screen.OpenTDBBrowseScreen
-import uz.nodirbek.flashcardsapp.ui.screen.SettingsScreen
 import uz.nodirbek.flashcardsapp.ui.theme.FdPrimary
 import uz.nodirbek.flashcardsapp.ui.theme.FdPrimaryDark
 import uz.nodirbek.flashcardsapp.ui.theme.FdRed
 import uz.nodirbek.flashcardsapp.ui.theme.OutfitFamily
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
-
-@Composable
-actual fun PlatformSettingsScreen(
-    viewModel: HomeViewModel,
-    onBackClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onNavigateToDeleted: () -> Unit
-) {
-    SettingsScreen(
-        viewModel = viewModel,
-        onBackClick = onBackClick,
-        onImportClick = onImportClick,
-        onNavigateToDeleted = onNavigateToDeleted
-    )
-}
-
-@Composable
-actual fun PlatformImportScreen(
-    viewModel: HomeViewModel,
-    deckTransferRepository: DeckTransferRepository?,
-    onCardsImported: (List<Card>) -> Unit,
-    onBackClick: () -> Unit,
-    onBrowseAnkiWeb: () -> Unit
-) {
-    ImportScreen(
-        viewModel = viewModel,
-        deckTransferRepository = deckTransferRepository,
-        onCardsImported = onCardsImported,
-        onBackClick = onBackClick,
-        onBrowseAnkiWeb = onBrowseAnkiWeb
-    )
-}
 
 @Composable
 actual fun PlatformAnkiWebBrowseScreen(

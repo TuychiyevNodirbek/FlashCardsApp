@@ -34,23 +34,6 @@ private fun NotAvailableOnIosScreen(title: String, onBackClick: () -> Unit) {
 }
 
 @Composable
-actual fun PlatformSettingsScreen(
-    viewModel: HomeViewModel,
-    onBackClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onNavigateToDeleted: () -> Unit
-) = NotAvailableOnIosScreen("Настройки", onBackClick)
-
-@Composable
-actual fun PlatformImportScreen(
-    viewModel: HomeViewModel,
-    deckTransferRepository: DeckTransferRepository?,
-    onCardsImported: (List<Card>) -> Unit,
-    onBackClick: () -> Unit,
-    onBrowseAnkiWeb: () -> Unit
-) = NotAvailableOnIosScreen("Импорт колод", onBackClick)
-
-@Composable
 actual fun PlatformAnkiWebBrowseScreen(
     viewModel: HomeViewModel,
     onCardsImported: (List<Card>) -> Unit,

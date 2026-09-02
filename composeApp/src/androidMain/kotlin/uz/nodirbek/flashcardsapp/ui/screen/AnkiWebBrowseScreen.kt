@@ -35,8 +35,8 @@ import uz.nodirbek.flashcardsapp.data.remote.ankiweb.AnkiWebDeckDetail
 import uz.nodirbek.flashcardsapp.data.remote.ankiweb.AnkiWebDeckSummary
 import uz.nodirbek.flashcardsapp.data.remote.ankiweb.AnkiWebException
 import uz.nodirbek.flashcardsapp.data.transfer.AnkiApkgImporter
-import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportException
-import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportResult
+import uz.nodirbek.flashcardsapp.shared.data.transfer.AnkiImportException
+import uz.nodirbek.flashcardsapp.shared.data.transfer.AnkiImportResult
 import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import uz.nodirbek.flashcardsapp.notification.DownloadNotificationHelper

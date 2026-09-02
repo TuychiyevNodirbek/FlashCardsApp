@@ -1,7 +1,5 @@
 package uz.nodirbek.flashcardsapp.ui.screen
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,24 +20,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uz.nodirbek.flashcardsapp.data.transfer.AnkiApkgImporter
-import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportException
-import uz.nodirbek.flashcardsapp.data.transfer.AnkiImportResult
+import uz.nodirbek.flashcardsapp.shared.data.transfer.AnkiImportResult
 import uz.nodirbek.flashcardsapp.shared.data.transfer.DeckTransferRepository
 import uz.nodirbek.flashcardsapp.shared.data.transfer.FdeckFile
 import uz.nodirbek.flashcardsapp.shared.data.transfer.FdeckParseException
 import uz.nodirbek.flashcardsapp.shared.data.transfer.FdeckVersionException
 import uz.nodirbek.flashcardsapp.shared.model.Card
 import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
+import uz.nodirbek.flashcardsapp.ui.components.FileImportOutcome
 import uz.nodirbek.flashcardsapp.ui.components.HtmlText
 import uz.nodirbek.flashcardsapp.ui.components.PressButton
+import uz.nodirbek.flashcardsapp.ui.components.rememberFileImportLauncher
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
@@ -63,7 +62,6 @@ fun ImportScreen(
     var newDeckName by remember { mutableStateOf("") }
     var ankiNewDeckName by remember { mutableStateOf("") }
     var ankiShowNewDeckField by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showSuccessSnackbar by remember { mutableStateOf(false) }
     var fdeckPreview by remember { mutableStateOf<FdeckFile?>(null) }
@@ -76,138 +74,94 @@ fun ImportScreen(
         flattenDecks(child)
     }}.distinctBy { it.deck.id }
 
-    val ankiImporter = remember { AnkiApkgImporter(context) }
+    @OptIn(ExperimentalUuidApi::class)
+    fun handlePlainText(content: String) {
+        // .md deck detection — if it looks like a deck (header/metadata comment), try to parse before CSV logic
+        val sniff = content.lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("<!--") }
+            .orEmpty()
+        if (sniff.startsWith("# ")) {
+            if (deckTransferRepository != null) {
+                try {
+                    fdeckPreview = deckTransferRepository.parse(content)
+                } catch (e: FdeckVersionException) {
+                    message = "Файл создан в более новой версии приложения"
+                    isError = true
+                } catch (e: FdeckParseException) {
+                    message = e.message ?: "Не удалось прочитать .md файл"
+                    isError = true
+                }
+            } else {
+                message = "Импорт .md колоды не поддерживается"
+                isError = true
+            }
+            return
+        }
 
-    fun displayNameOf(uri: android.net.Uri): String? {
-        return context.contentResolver.query(uri, null, null, null, null)?.use { c ->
-            val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+        val lines = content.lines().filter { it.isNotBlank() }
+        if (lines.size > 5000) {
+            message = "Файл слишком большой (макс. 5000 строк)"
+            isError = true
+            return
+        }
+
+        val delimiter = detectDelimiter(lines)
+        val cards = mutableListOf<Card>()
+        val today = RateCardUseCase.getTodayDate()
+
+        for (line in lines) {
+            val parts = line.split(delimiter).map { it.trim() }
+            if (parts.size >= 2) {
+                val front = parts[0]
+                val back = parts.drop(1).joinToString(", ")
+                if (front.isNotBlank() && back.isNotBlank()) {
+                    cards.add(
+                        Card(
+                            id = Uuid.random().toString(),
+                            front = front,
+                            back = back,
+                            deckId = selectedDeckId ?: "default",
+                            dueDate = today,
+                            createdAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                        )
+                    )
+                }
+            }
+        }
+
+        if (cards.isEmpty()) {
+            message = "Не найдено подходящих пар в файле"
+            isError = true
+            isSuccess = false
+        } else {
+            onCardsImported(cards)
+            importedCount = cards.size
+            isSuccess = true
+            isError = false
+            message = ""
+            showSuccessSnackbar = true
+            scope.launch {
+                delay(3000)
+                showSuccessSnackbar = false
+            }
         }
     }
 
-    val fileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            val fileName = displayNameOf(uri).orEmpty()
-            if (fileName.endsWith(".apkg", ignoreCase = true)) {
-                isLoading = true
-                scope.launch {
-                    try {
-                        ankiPreview = ankiImporter.import(uri)
-                        isError = false
-                        message = ""
-                    } catch (e: AnkiImportException) {
-                        message = e.message ?: "Не удалось прочитать файл Anki"
-                        isError = true
-                        isSuccess = false
-                    } catch (e: Exception) {
-                        message = "Ошибка: ${e.message}"
-                        isError = true
-                        isSuccess = false
-                    }
-                    isLoading = false
-                }
-                return@rememberLauncherForActivityResult
+    val fileLauncher = rememberFileImportLauncher { outcome ->
+        isLoading = false
+        when (outcome) {
+            is FileImportOutcome.Anki -> {
+                ankiPreview = outcome.result
+                isError = false
+                message = ""
             }
-            isLoading = true
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                if (inputStream == null) {
-                    message = "Не удалось открыть файл"
-                    isError = true
-                    isLoading = false
-                    return@rememberLauncherForActivityResult
-                }
-
-                val content = inputStream.bufferedReader().readText()
-                inputStream.close()
-
-                if (content.isBlank()) {
-                    message = "Файл пустой"
-                    isError = true
-                    isLoading = false
-                    return@rememberLauncherForActivityResult
-                }
-
-                // .md deck detection — if it looks like a deck (header/metadata comment), try to parse before CSV logic
-                val sniff = content.lineSequence()
-                    .map { it.trim() }
-                    .firstOrNull { it.isNotEmpty() && !it.startsWith("<!--") }
-                    .orEmpty()
-                if (sniff.startsWith("# ")) {
-                    if (deckTransferRepository != null) {
-                        try {
-                            fdeckPreview = deckTransferRepository.parse(content)
-                        } catch (e: FdeckVersionException) {
-                            message = "Файл создан в более новой версии приложения"
-                            isError = true
-                        } catch (e: FdeckParseException) {
-                            message = e.message ?: "Не удалось прочитать .md файл"
-                            isError = true
-                        }
-                    } else {
-                        message = "Импорт .md колоды не поддерживается"
-                        isError = true
-                    }
-                    isLoading = false
-                    return@rememberLauncherForActivityResult
-                }
-
-                val lines = content.lines().filter { it.isNotBlank() }
-                if (lines.size > 5000) {
-                    message = "Файл слишком большой (макс. 5000 строк)"
-                    isError = true
-                    isLoading = false
-                    return@rememberLauncherForActivityResult
-                }
-
-                val delimiter = detectDelimiter(lines)
-                val cards = mutableListOf<Card>()
-                val today = RateCardUseCase.getTodayDate()
-
-                for (line in lines) {
-                    val parts = line.split(delimiter).map { it.trim() }
-                    if (parts.size >= 2) {
-                        val front = parts[0]
-                        val back = parts.drop(1).joinToString(", ")
-                        if (front.isNotBlank() && back.isNotBlank()) {
-                            cards.add(
-                                Card(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    front = front,
-                                    back = back,
-                                    deckId = selectedDeckId ?: "default",
-                                    dueDate = today,
-                                    createdAt = System.currentTimeMillis()
-                                )
-                            )
-                        }
-                    }
-                }
-
-                if (cards.isEmpty()) {
-                    message = "Не найдено подходящих пар в файле"
-                    isError = true
-                    isSuccess = false
-                } else {
-                    onCardsImported(cards)
-                    importedCount = cards.size
-                    isSuccess = true
-                    isError = false
-                    message = ""
-                    showSuccessSnackbar = true
-                    scope.launch {
-                        delay(3000)
-                        showSuccessSnackbar = false
-                    }
-                }
-            } catch (e: Exception) {
-                message = "Ошибка: ${e.message}"
+            is FileImportOutcome.PlainText -> handlePlainText(outcome.content)
+            is FileImportOutcome.Error -> {
+                message = outcome.message
                 isError = true
                 isSuccess = false
             }
-            isLoading = false
         }
     }
 
@@ -239,7 +193,7 @@ fun ImportScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .background(FdPrimaryLight)
                         .border(2.dp, FdPrimary.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                        .clickable(enabled = !isLoading) { fileLauncher.launch("*/*") },
+                        .clickable(enabled = !isLoading) { fileLauncher.launch() },
                     contentAlignment = Alignment.Center
                 ) {
                     if (isLoading) {
@@ -574,20 +528,22 @@ fun ImportScreen(
                                     onClick = {
                                         val today = RateCardUseCase.getTodayDate()
                                         val targetDeckId = if (ankiNewDeckName.isNotBlank()) {
-                                            val newId = java.util.UUID.randomUUID().toString()
+                                            @OptIn(ExperimentalUuidApi::class)
+                                            val newId = Uuid.random().toString()
                                             viewModel.addDeckWithId(newId, ankiNewDeckName.trim())
                                             newId
                                         } else {
                                             selectedDeckId ?: return@PressButton
                                         }
                                         val cards = preview.cards.map { c ->
+                                            @OptIn(ExperimentalUuidApi::class)
                                             Card(
-                                                id = java.util.UUID.randomUUID().toString(),
+                                                id = Uuid.random().toString(),
                                                 front = c.front,
                                                 back = c.back,
                                                 deckId = targetDeckId,
                                                 dueDate = today,
-                                                createdAt = System.currentTimeMillis()
+                                                createdAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                                             )
                                         }
                                         onCardsImported(cards)
@@ -851,7 +807,7 @@ fun ImportScreen(
             if (!isSuccess) {
                 item {
                     PressButton(
-                        onClick = { fileLauncher.launch("*/*") },
+                        onClick = { fileLauncher.launch() },
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         color = FdPrimary,
                         shadowColor = FdPrimaryDark,

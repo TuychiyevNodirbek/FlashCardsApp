@@ -88,7 +88,7 @@ fun NavGraph(
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
             ) {
-                PlatformSettingsScreen(
+                SettingsScreen(
                     viewModel = homeViewModel,
                     onBackClick = { navController.popBackStack() },
                     onImportClick = { navController.navigate(Screen.Import.route) },
@@ -375,7 +375,7 @@ fun NavGraph(
                 popEnterTransition = { UnderlyingScreenTransitions.popEnter() },
                 popExitTransition = { SideModalTransitions.popExit() }
             ) {
-                PlatformImportScreen(
+                ImportScreen(
                     viewModel = homeViewModel,
                     deckTransferRepository = container.deckTransferRepository,
                     onCardsImported = { cards ->

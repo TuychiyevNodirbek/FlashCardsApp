@@ -6,19 +6,13 @@ import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uz.nodirbek.flashcardsapp.shared.data.transfer.AnkiImportException
+import uz.nodirbek.flashcardsapp.shared.data.transfer.AnkiImportResult
 import uz.nodirbek.flashcardsapp.shared.data.transfer.FdeckCard
 import java.io.File
 import java.util.zip.ZipFile
 
 private const val TAG = "AnkiApkgImporter"
-
-class AnkiImportException(message: String) : Exception(message)
-
-/** Результат разбора .apkg: имя колоды -> карточки (front/back с очищенным HTML). */
-data class AnkiImportResult(
-    val deckName: String,
-    val cards: List<FdeckCard>
-)
 
 /**
  * Импорт колод Anki (.apkg). Anki-пакет — это zip-архив с SQLite-базой

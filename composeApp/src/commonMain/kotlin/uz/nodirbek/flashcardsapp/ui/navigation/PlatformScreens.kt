@@ -8,28 +8,11 @@ import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
 
 /**
  * Экраны, у которых пока нет общей реализации (WebView-скрейпинг AnkiWeb,
- * файловые пикеры, HttpURLConnection) — androidMain даёт полноценные версии
- * (SettingsScreen/ImportScreen/AnkiWebBrowseScreen/OpenTDBBrowseScreen),
- * iosMain — временные заглушки. Полный разбор на общую и платформенную часть —
- * Фаза 6. (HomeScreen уже полностью общий — см. ui/screen/HomeScreen.kt.)
+ * HttpURLConnection) — androidMain даёт полноценные версии (AnkiWebBrowseScreen/
+ * OpenTDBBrowseScreen), iosMain — временные заглушки. Полный разбор на общую и
+ * платформенную часть — Фаза 6. (HomeScreen/SettingsScreen/ImportScreen уже
+ * полностью общие.)
  */
-@Composable
-expect fun PlatformSettingsScreen(
-    viewModel: HomeViewModel,
-    onBackClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onNavigateToDeleted: () -> Unit
-)
-
-@Composable
-expect fun PlatformImportScreen(
-    viewModel: HomeViewModel,
-    deckTransferRepository: DeckTransferRepository?,
-    onCardsImported: (List<Card>) -> Unit,
-    onBackClick: () -> Unit,
-    onBrowseAnkiWeb: () -> Unit
-)
-
 @Composable
 expect fun PlatformAnkiWebBrowseScreen(
     viewModel: HomeViewModel,
