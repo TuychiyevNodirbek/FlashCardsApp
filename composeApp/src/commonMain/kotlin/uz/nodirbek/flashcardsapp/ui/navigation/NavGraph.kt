@@ -61,7 +61,7 @@ fun NavGraph(
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
             ) {
-                PlatformHomeScreen(
+                HomeScreen(
                     viewModel = homeViewModel,
                     deckTransferRepository = container.deckTransferRepository,
                     onNavigateToStudy = { navController.navigate(Screen.SrsReview.createRoute(HomeViewModel.ALL_DECKS)) },

@@ -1,6 +1,5 @@
 package uz.nodirbek.flashcardsapp.ui.screen
 
-import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.AnimatedVisibility
@@ -19,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -43,28 +41,26 @@ import uz.nodirbek.flashcardsapp.composeapp.generated.resources.ic_deck_empty
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import uz.nodirbek.flashcardsapp.data.transfer.DeckShareHelper
 import uz.nodirbek.flashcardsapp.shared.data.transfer.DeckTransferRepository
 import uz.nodirbek.flashcardsapp.shared.model.Deck
 import uz.nodirbek.flashcardsapp.shared.scheduler.RateCardUseCase
 import kotlin.math.ceil
+import uz.nodirbek.flashcardsapp.ui.components.BackHandler
 import uz.nodirbek.flashcardsapp.ui.components.BannerAction
 import uz.nodirbek.flashcardsapp.ui.components.BannerEmojiBadge
 import uz.nodirbek.flashcardsapp.ui.components.BannerLeadingSize
 import uz.nodirbek.flashcardsapp.ui.components.BannerStyle
 import uz.nodirbek.flashcardsapp.ui.components.HomeBanner
-import uz.nodirbek.flashcardsapp.ui.components.PressButton
 import uz.nodirbek.flashcardsapp.ui.components.SnackbarData
 import uz.nodirbek.flashcardsapp.ui.components.TopBannerCarousel
 import uz.nodirbek.flashcardsapp.ui.components.TopSnackbar
+import uz.nodirbek.flashcardsapp.ui.components.rememberAppExiter
 import uz.nodirbek.flashcardsapp.ui.components.rememberSnackbarState
+import uz.nodirbek.flashcardsapp.ui.navigation.PlatformDeckShareSheet
 import uz.nodirbek.flashcardsapp.ui.state.DeckWithStats
 import uz.nodirbek.flashcardsapp.ui.state.HomeUiState
 import uz.nodirbek.flashcardsapp.ui.theme.*
 import uz.nodirbek.flashcardsapp.ui.viewmodel.HomeViewModel
-import uz.nodirbek.flashcardsapp.ui.components.UnifiedAppBar
 
 @Composable
 fun HomeScreen(
@@ -85,14 +81,14 @@ fun HomeScreen(
     var deleteDepth by remember { mutableStateOf(0) }
     var deletePhase by remember { mutableStateOf(1) }
 
-    val context = LocalContext.current
+    val exitApp = rememberAppExiter()
     val scope = rememberCoroutineScope()
     val snackbar = rememberSnackbarState()
     var backPressedOnce by remember { mutableStateOf(false) }
     var showExitHint by remember { mutableStateOf(false) }
     BackHandler {
         if (backPressedOnce) {
-            (context as? androidx.activity.ComponentActivity)?.finish()
+            exitApp()
         } else {
             backPressedOnce = true
             showExitHint = true
@@ -268,7 +264,7 @@ fun HomeScreen(
 
     sharingDeck?.let { deck ->
         if (deckTransferRepository != null) {
-            DeckShareSheet(
+            PlatformDeckShareSheet(
                 deck = deck,
                 transferRepository = deckTransferRepository,
                 onDismiss = { sharingDeck = null },
@@ -608,7 +604,7 @@ private fun DeckRow(
     onLongClick: (() -> Unit)? = null
 ) {
     val indentDp = (14 + depth * 20).dp
-    val indicatorColor = try { Color(android.graphics.Color.parseColor(deck.deck.colorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
+    val indicatorColor = try { parseHexColor(deck.deck.colorHex) } catch (e: Exception) { MaterialTheme.colorScheme.primary }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -810,127 +806,6 @@ private fun EmptyHomeState(onCreateDeck: () -> Unit, onImport: () -> Unit) {
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.primary
             )
-        }
-    }
-}
-
-/** Bottom sheet «Поделиться колодой»: share intent или сохранение в файл. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DeckShareSheet(
-    deck: Deck,
-    transferRepository: DeckTransferRepository,
-    onDismiss: () -> Unit,
-    onSuccess: (message: String) -> Unit = {}
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var exportError by remember { mutableStateOf<String?>(null) }
-
-    var pendingContent by remember { mutableStateOf<String?>(null) }
-    val createDocLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { uri ->
-        val content = pendingContent
-        if (uri != null && content != null) {
-            try {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(content.toByteArray(Charsets.UTF_8))
-                }
-                onSuccess("Файл сохранён")
-            } catch (e: Exception) {
-                exportError = e.message
-                onDismiss()
-            }
-        }
-        pendingContent = null
-    }
-
-    suspend fun buildContent(): String {
-        val file = transferRepository.exportDeck(deck.id)
-        return transferRepository.serialize(file)
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            Text(
-                "«${deck.name}»",
-                fontFamily = OutfitFamily,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                "Файл .md можно отправить в любой мессенджер — получатель импортирует его в приложении",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-            exportError?.let {
-                Text(
-                    "Ошибка: $it",
-                    fontSize = 12.sp,
-                    color = FdRed,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-            Spacer(Modifier.height(18.dp))
-            PressButton(
-                onClick = {
-                    scope.launch {
-                        try {
-                            DeckShareHelper.shareFile(
-                                context,
-                                DeckShareHelper.safeFileName(deck.name),
-                                buildContent()
-                            )
-                            onSuccess("Колода отправлена")
-                        } catch (e: Exception) {
-                            exportError = e.message
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                color = FdPrimary, shadowColor = FdPrimaryDark,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    "📤 Поделиться колодой",
-                    fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                    color = Color.White
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            PressButton(
-                onClick = {
-                    scope.launch {
-                        try {
-                            pendingContent = buildContent()
-                            createDocLauncher.launch(DeckShareHelper.safeFileName(deck.name))
-                        } catch (e: Exception) {
-                            exportError = e.message
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shadowColor = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    "💾 Сохранить в файл",
-                    fontFamily = OutfitFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
         }
     }
 }
