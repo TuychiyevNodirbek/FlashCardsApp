@@ -18,11 +18,12 @@ jobs:
       - name: Create PR if not exists
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          BRANCH: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          BRANCH="${{ github.ref_name }}"
-          EXISTING=$(gh pr list --repo "${{ github.repository }}" --head "$BRANCH" --base main --json number --jq 'length')
+          EXISTING=$(gh pr list --repo "$REPO" --head "$BRANCH" --base main --json number --jq 'length')
           if [ "$EXISTING" = "0" ]; then
-            gh pr create --repo "${{ github.repository }}" \
+            gh pr create --repo "$REPO" \
               --base main --head "$BRANCH" \
               --title "test: $BRANCH" \
               --body "Автоматически создан при push в ветку \`$BRANCH\`."
